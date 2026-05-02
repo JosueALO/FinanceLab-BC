@@ -39,7 +39,7 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        const API_URL = "AQUI_PEGA_LA_URL_DE_APPS_SCRIPT"; // <--- REEMPLAZA ESTO
+        const API_URL = "https://script.google.com/macros/s/AKfycbweLm3Vqu8_9LusW0Y24jzkzw2IuTr7XHoWyuSKN_kIfJshRdkWXpV34tdjmmYUg2Yv/exec"; // <--- REEMPLAZA ESTO
 
         const apiCall = async (action, payload = null) => {
             const response = await fetch(API_URL, {
