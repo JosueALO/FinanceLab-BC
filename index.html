@@ -117,14 +117,10 @@
             );
         };
 
-        // === PESTAÑA: TABLERO (CON BUSCADOR Y FILTRO DE TABLA) ===
+        // === PESTAÑA: TABLERO (CON ORDENAMIENTO EN TABLA) ===
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
-            
-            // NUEVOS CONTROLES DE TABLA
-            const [tablaFiltroTipo, setTablaFiltroTipo] = useState('Gasto');
-            const [busqueda, setBusqueda] = useState('');
 
             const mapCuentas = useMemo(() => { let map = {}; cuentas.forEach(c => map[c.nombre] = c.propietario); return map; }, [cuentas]);
             const periodos = useMemo(() => [...new Set(rawLogs.map(l => l.Periodo_Pago))].filter(Boolean).sort((a, b) => { try { const pA = String(a).split('/'); const pB = String(b).split('/'); return new Date(pB[2], pB[1]-1, pB[0]) - new Date(pA[2], pA[1]-1, pA[0]); } catch(e) { return 0; } }), [rawLogs]);
@@ -135,9 +131,7 @@
             useEffect(() => { setHiddenTipos([]); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
-            
-            // GRÁFICOS: Se mantienen calculados SOLO con los Gastos
-            const logsGrafico = useMemo(() => logsGlobal.filter(l => {
+            const logsScope = useMemo(() => logsGlobal.filter(l => {
                 if (l.Tipo_Operacion === 'Transferencia' || l.Tipo_Operacion === 'Ingreso') return false; 
                 if (viewScope === 'Compartido') return !l.Tipo_Gasto.includes('Personal');
                 if (viewScope === 'Josue') return Number(l.Participacion_Josue) > 0;
@@ -145,39 +139,8 @@
                 return false;
             }), [logsGlobal, viewScope]);
 
-            const availableTipos = useMemo(() => [...new Set(logsGrafico.map(l => l.Tipo_Gasto))], [logsGrafico]);
-            const logsGraficoFiltrado = useMemo(() => logsGrafico.filter(l => !hiddenTipos.includes(l.Tipo_Gasto)), [logsGrafico, hiddenTipos]);
-
-            // LISTA DE TABLA: Obedece al Selector Universal y la Búsqueda
-            const tablaLogs = useMemo(() => {
-                let mapeados = logsGlobal.filter(l => {
-                    // 1. Filtrar por Tipo de Operación
-                    if (tablaFiltroTipo !== 'Todos' && l.Tipo_Operacion !== tablaFiltroTipo) return false;
-                    
-                    // 2. Si es Gasto o Ingreso, aplicar filtro de Scope (Compartido/Josue/Abi)
-                    if (l.Tipo_Operacion !== 'Transferencia') {
-                        if (viewScope === 'Compartido' && l.Tipo_Gasto && l.Tipo_Gasto.includes('Personal')) return false;
-                        if (viewScope === 'Josue' && !(Number(l.Participacion_Josue) > 0)) return false;
-                        if (viewScope === 'Abi' && !(Number(l.Participacion_Abi) > 0)) return false;
-                    }
-                    return true;
-                });
-
-                // 3. Aplicar Búsqueda Textual
-                if (busqueda.trim() !== '') {
-                    const q = busqueda.toLowerCase();
-                    mapeados = mapeados.filter(l => 
-                        (l.Compra && l.Compra.toLowerCase().includes(q)) ||
-                        (l.Categoria && l.Categoria.toLowerCase().includes(q)) ||
-                        (l.MacroCategoria && l.MacroCategoria.toLowerCase().includes(q)) ||
-                        (l.Cuenta_Origen && l.Cuenta_Origen.toLowerCase().includes(q)) ||
-                        (l.Cuenta_Destino && l.Cuenta_Destino.toLowerCase().includes(q)) ||
-                        (l.Fecha_Compra && l.Fecha_Compra.includes(q)) ||
-                        (l.Monto_Total && String(l.Monto_Total).includes(q))
-                    );
-                }
-                return mapeados;
-            }, [logsGlobal, tablaFiltroTipo, viewScope, busqueda]);
+            const availableTipos = useMemo(() => [...new Set(logsScope.map(l => l.Tipo_Gasto))], [logsScope]);
+            const logsFiltered = useMemo(() => logsScope.filter(l => !hiddenTipos.includes(l.Tipo_Gasto)), [logsScope, hiddenTipos]);
 
             const deudaAbi = logsGlobal.reduce((acc, curr) => {
                 const monto = Number(curr.Monto_Parcial) || 0;
@@ -195,16 +158,16 @@
                 return acc;
             }, 0);
 
-            const totalGastoView = logsGraficoFiltrado.reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
+            const totalGastoView = logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
 
             const categoriasData = useMemo(() => {
                 let map = {};
-                logsGraficoFiltrado.forEach(l => {
+                logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').forEach(l => {
                     let amt = viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi));
                     if (amt > 0) map[l.Categoria] = (map[l.Categoria] || 0) + amt;
                 });
                 return Object.keys(map).map(k => ({ nombre: k, total: map[k] })).sort((a,b) => b.total - a.total);
-            }, [logsGraficoFiltrado, viewScope]);
+            }, [logsFiltered, viewScope]);
 
             const currentPresupuesto = presupuesto[viewScope] || {};
             const categoriasParaRender = useMemo(() => {
@@ -224,6 +187,40 @@
                 return `conic-gradient(${gradientArr.join(', ')})`;
             };
 
+            // NUEVO ESTADO PARA ORDENAR LA TABLA (Por defecto por fecha descendente)
+            const [sortConfig, setSortConfig] = useState({ key: 'Fecha_Compra', direction: 'desc' });
+
+            const requestSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+                setSortConfig({ key, direction });
+            };
+
+            const sortedLogs = useMemo(() => {
+                let sortableItems = [...logsFiltered];
+                sortableItems.sort((a, b) => {
+                    let valA = a[sortConfig.key];
+                    let valB = b[sortConfig.key];
+
+                    if (sortConfig.key === 'Fecha_Compra') {
+                        const parseD = (s) => { if(!s) return 0; const [d,m,y] = s.split('/'); return new Date(y, m-1, d).getTime(); };
+                        valA = parseD(a.Fecha_Compra); valB = parseD(b.Fecha_Compra);
+                    } else if (sortConfig.key === 'Aporte') {
+                        valA = viewScope === 'Compartido' ? Number(a.Monto_Parcial) : (viewScope === 'Josue' ? Number(a.Participacion_Josue) : Number(a.Participacion_Abi));
+                        valB = viewScope === 'Compartido' ? Number(b.Monto_Parcial) : (viewScope === 'Josue' ? Number(b.Participacion_Josue) : Number(b.Participacion_Abi));
+                    } else if (sortConfig.key === 'Monto_Total') {
+                        valA = Number(a.Monto_Total) || 0; valB = Number(b.Monto_Total) || 0;
+                    } else {
+                        valA = String(valA || '').toLowerCase(); valB = String(valB || '').toLowerCase();
+                    }
+
+                    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                return sortableItems;
+            }, [logsFiltered, sortConfig, viewScope]);
+
             return (
                 <div className="space-y-6 fade-in">
                     <div className="glass-card p-4 flex flex-col gap-3">
@@ -233,7 +230,7 @@
                             </div>
                             <div className="flex items-center gap-3 w-full md:w-auto">
                                 <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold whitespace-nowrap">Corte Operativo</span>
-                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto outline-none text-teal-400 font-bold" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
+                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto outline-none" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
                                     {periodos.length === 0 && <option>{periodoActivo}</option>}
                                     {periodos.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
@@ -262,7 +259,7 @@
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="glass-card p-6 flex flex-col items-center justify-center">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-6 w-full text-left">Distribución de Gastos</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-6 w-full text-left">Distribución</h3>
                             <div className="pie-chart w-48 h-48 md:w-56 md:h-56 mb-6 transition-all" style={{ background: construirConicGradient() }}></div>
                         </div>
                         <div className="glass-card p-6 overflow-y-auto max-h-80">
@@ -286,62 +283,42 @@
                         </div>
                     </div>
 
-                    <div className="glass-card overflow-hidden">
-                        {/* BARRA DE HERRAMIENTAS DE LA TABLA */}
-                        <div className="p-4 border-b border-zinc-800 bg-zinc-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
-                            <div className="flex items-center gap-3 w-full md:w-auto">
-                                <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Auditoría:</span>
-                                <select className="p-2 text-xs rounded bg-black outline-none border border-zinc-800 text-teal-400 font-bold w-full md:w-auto" value={tablaFiltroTipo} onChange={e=>setTablaFiltroTipo(e.target.value)}>
-                                    <option value="Gasto">Ver Solo Gastos</option>
-                                    <option value="Ingreso">Ver Solo Ingresos</option>
-                                    <option value="Transferencia">Ver Transferencias</option>
-                                    <option value="Todos">Ver Todos los Movimientos</option>
-                                </select>
-                            </div>
-                            <div className="w-full md:w-72">
-                                <input className="w-full p-2 text-xs rounded bg-black border border-zinc-800 outline-none text-zinc-300" placeholder="🔍 Buscar (#tags, concepto, monto...)" value={busqueda} onChange={e=>setBusqueda(e.target.value)} />
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-[11px] whitespace-nowrap">
-                                <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold">
-                                    <tr><th className="p-3">Fecha</th><th className="p-3">Concepto</th><th className="p-3 text-teal-400">Categoría</th><th className="p-3">Cuenta (Flujo)</th><th className="p-3">Ticket Total</th><th className="p-3">Aporte/Parcial</th><th className="p-3 text-center">Acciones</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-900">
-                                    {tablaLogs.slice().reverse().map((log, idx) => {
-                                        let aporte = Number(log.Monto_Parcial) || 0;
-                                        if (log.Tipo_Operacion === 'Gasto') {
-                                            aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi));
-                                        }
-
-                                        let flujoStr = log.Cuenta_Origen;
-                                        if (log.Tipo_Operacion === 'Transferencia') flujoStr += ` ➔ ${log.Cuenta_Destino}`;
-
-                                        const colorFila = log.Tipo_Operacion === 'Ingreso' ? 'text-teal-400' : (log.Tipo_Operacion === 'Transferencia' ? 'text-indigo-400' : 'text-zinc-200');
-
-                                        return (
-                                            <tr key={idx} className="hover:bg-zinc-900/50">
-                                                <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
-                                                <td className={`p-3 font-bold ${colorFila}`}>{log.Compra} <span className="text-[8px] border border-zinc-700 px-1 rounded ml-1 text-zinc-500 uppercase">{log.Tipo_Operacion}</span></td>
-                                                <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
-                                                <td className="p-3 text-zinc-500">{flujoStr}</td>
-                                                <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
-                                                <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
-                                                <td className="p-3 text-center">
-                                                    {deletingLog === log.ID_Unico ? (
-                                                        <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
-                                                    ) : (
-                                                        <div className="flex gap-3 justify-center items-center"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500">🗑️</button></div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {tablaLogs.length === 0 && <tr><td colSpan="7" className="p-8 text-center text-zinc-600 font-mono">No se encontraron registros en esta búsqueda.</td></tr>}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="glass-card overflow-x-auto">
+                        <table className="w-full text-left text-[11px] whitespace-nowrap">
+                            <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold select-none">
+                                <tr>
+                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Fecha_Compra')}>Fecha {sortConfig.key==='Fecha_Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Compra')}>Concepto {sortConfig.key==='Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 text-teal-400 cursor-pointer hover:text-white" onClick={() => requestSort('Categoria')}>Categoría {sortConfig.key==='Categoria'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Cuenta_Origen')}>Cuenta Origen {sortConfig.key==='Cuenta_Origen'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Monto_Total')}>Ticket Total {sortConfig.key==='Monto_Total'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Aporte')}>Aporte/Parcial {sortConfig.key==='Aporte'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                    <th className="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-900">
+                                {sortedLogs.map((log, idx) => {
+                                    let aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi));
+                                    return (
+                                        <tr key={idx} className="hover:bg-zinc-900/50">
+                                            <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
+                                            <td className="p-3 font-bold text-zinc-200">{log.Compra}</td>
+                                            <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
+                                            <td className="p-3 text-zinc-500">{log.Cuenta_Origen}</td>
+                                            <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
+                                            <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
+                                            <td className="p-3 text-center">
+                                                {deletingLog === log.ID_Unico ? (
+                                                    <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
+                                                ) : (
+                                                    <div className="flex gap-3 justify-center items-center"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500">🗑️</button></div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
@@ -560,7 +537,7 @@
                                         </div>
                                     )}
 
-                                    <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Descripción (Usa #tags si gustas)</label><input className="w-full p-3 rounded outline-none text-xs" placeholder="Concepto..." value={form.compra} onChange={e => setForm({...form, compra: e.target.value})} /></div>
+                                    <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Descripción</label><input className="w-full p-3 rounded outline-none text-xs" placeholder="Concepto..." value={form.compra} onChange={e => setForm({...form, compra: e.target.value})} /></div>
                                     
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
