@@ -54,7 +54,7 @@
 
             const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = val; setLocalCuentas(updated); };
             const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim() }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' }); };
-            const eliminarCuenta = (nombre) => { if (confirm(`¿Eliminar la cuenta ${nombre}?`)) setLocalCuentas(localCuentas.filter(c => c.nombre !== nombre)); };
+            const eliminarCuenta = (nombre) => { if (window.confirm(`¿Eliminar la cuenta ${nombre}?`)) setLocalCuentas(localCuentas.filter(c => c.nombre !== nombre)); };
             const guardar = () => { setSaving(true); apiCall('guardarCuentas', localCuentas).then(() => { setSaving(false); loadData(); }); };
 
             return (
@@ -70,11 +70,7 @@
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Propietario</label><select className="w-full p-2 text-xs rounded bg-black" value={form.propietario} onChange={e=>setForm({...form, propietario: e.target.value})}><option>Josué</option><option>Abi</option><option>Hogar</option></select></div>
                         <div>
                             <label className="text-[9px] uppercase text-zinc-500 mb-1 block">Día Corte</label>
-                            {form.tipo === 'Pasivo' ? (
-                                <input type="number" className="w-full p-2 text-xs rounded bg-black" placeholder="Ej. 19" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} />
-                            ) : (
-                                <div className="w-full p-2 text-xs rounded bg-black text-zinc-600 font-mono cursor-not-allowed text-center">N/A</div>
-                            )}
+                            {form.tipo === 'Pasivo' ? <input type="number" className="w-full p-2 text-xs rounded bg-black" placeholder="Ej. 19" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} /> : <div className="w-full p-2 text-xs rounded bg-black text-zinc-600 font-mono cursor-not-allowed text-center">N/A</div>}
                         </div>
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Inicial</label><div className="flex gap-2"><input type="number" step="0.01" className="w-full p-2 text-xs rounded bg-black font-mono text-teal-400" placeholder="0.00" value={form.saldoInicial} onChange={e=>setForm({...form, saldoInicial: e.target.value})} /><button onClick={agregarCuenta} className="bg-zinc-800 px-4 rounded text-white font-bold hover:bg-teal-500">+</button></div></div>
                     </div>
@@ -121,6 +117,9 @@
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
+            
+            const [tablaFiltroTipo, setTablaFiltroTipo] = useState('Gasto');
+            const [busqueda, setBusqueda] = useState('');
 
             const mapCuentas = useMemo(() => { let map = {}; cuentas.forEach(c => map[c.nombre] = c.propietario); return map; }, [cuentas]);
             const periodos = useMemo(() => [...new Set(rawLogs.map(l => l.Periodo_Pago))].filter(Boolean).sort((a, b) => { try { const pA = String(a).split('/'); const pB = String(b).split('/'); return new Date(pB[2], pB[1]-1, pB[0]) - new Date(pA[2], pA[1]-1, pA[0]); } catch(e) { return 0; } }), [rawLogs]);
@@ -131,7 +130,8 @@
             useEffect(() => { setHiddenTipos([]); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
-            const logsScope = useMemo(() => logsGlobal.filter(l => {
+            
+            const logsGrafico = useMemo(() => logsGlobal.filter(l => {
                 if (l.Tipo_Operacion === 'Transferencia' || l.Tipo_Operacion === 'Ingreso') return false; 
                 if (viewScope === 'Compartido') return !l.Tipo_Gasto.includes('Personal');
                 if (viewScope === 'Josue') return Number(l.Participacion_Josue) > 0;
@@ -139,8 +139,34 @@
                 return false;
             }), [logsGlobal, viewScope]);
 
-            const availableTipos = useMemo(() => [...new Set(logsScope.map(l => l.Tipo_Gasto))], [logsScope]);
-            const logsFiltered = useMemo(() => logsScope.filter(l => !hiddenTipos.includes(l.Tipo_Gasto)), [logsScope, hiddenTipos]);
+            const availableTipos = useMemo(() => [...new Set(logsGrafico.map(l => l.Tipo_Gasto))], [logsGrafico]);
+            const logsGraficoFiltrado = useMemo(() => logsGrafico.filter(l => !hiddenTipos.includes(l.Tipo_Gasto)), [logsGrafico, hiddenTipos]);
+
+            const tablaLogs = useMemo(() => {
+                let mapeados = logsGlobal.filter(l => {
+                    if (tablaFiltroTipo !== 'Todos' && l.Tipo_Operacion !== tablaFiltroTipo) return false;
+                    if (l.Tipo_Operacion !== 'Transferencia') {
+                        if (viewScope === 'Compartido' && l.Tipo_Gasto && l.Tipo_Gasto.includes('Personal')) return false;
+                        if (viewScope === 'Josue' && !(Number(l.Participacion_Josue) > 0)) return false;
+                        if (viewScope === 'Abi' && !(Number(l.Participacion_Abi) > 0)) return false;
+                    }
+                    return true;
+                });
+
+                if (busqueda.trim() !== '') {
+                    const q = busqueda.toLowerCase();
+                    mapeados = mapeados.filter(l => 
+                        (l.Compra && l.Compra.toLowerCase().includes(q)) ||
+                        (l.Categoria && l.Categoria.toLowerCase().includes(q)) ||
+                        (l.MacroCategoria && l.MacroCategoria.toLowerCase().includes(q)) ||
+                        (l.Cuenta_Origen && l.Cuenta_Origen.toLowerCase().includes(q)) ||
+                        (l.Cuenta_Destino && l.Cuenta_Destino.toLowerCase().includes(q)) ||
+                        (l.Fecha_Compra && l.Fecha_Compra.includes(q)) ||
+                        (l.Monto_Total && String(l.Monto_Total).includes(q))
+                    );
+                }
+                return mapeados;
+            }, [logsGlobal, tablaFiltroTipo, viewScope, busqueda]);
 
             const deudaAbi = logsGlobal.reduce((acc, curr) => {
                 const monto = Number(curr.Monto_Parcial) || 0;
@@ -158,16 +184,16 @@
                 return acc;
             }, 0);
 
-            const totalGastoView = logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
+            const totalGastoView = logsGraficoFiltrado.reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
 
             const categoriasData = useMemo(() => {
                 let map = {};
-                logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').forEach(l => {
+                logsGraficoFiltrado.forEach(l => {
                     let amt = viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi));
                     if (amt > 0) map[l.Categoria] = (map[l.Categoria] || 0) + amt;
                 });
                 return Object.keys(map).map(k => ({ nombre: k, total: map[k] })).sort((a,b) => b.total - a.total);
-            }, [logsFiltered, viewScope]);
+            }, [logsGraficoFiltrado, viewScope]);
 
             const currentPresupuesto = presupuesto[viewScope] || {};
             const categoriasParaRender = useMemo(() => {
@@ -187,7 +213,6 @@
                 return `conic-gradient(${gradientArr.join(', ')})`;
             };
 
-            // NUEVO ESTADO PARA ORDENAR LA TABLA (Por defecto por fecha descendente)
             const [sortConfig, setSortConfig] = useState({ key: 'Fecha_Compra', direction: 'desc' });
 
             const requestSort = (key) => {
@@ -197,7 +222,7 @@
             };
 
             const sortedLogs = useMemo(() => {
-                let sortableItems = [...logsFiltered];
+                let sortableItems = [...tablaLogs];
                 sortableItems.sort((a, b) => {
                     let valA = a[sortConfig.key];
                     let valB = b[sortConfig.key];
@@ -219,7 +244,7 @@
                     return 0;
                 });
                 return sortableItems;
-            }, [logsFiltered, sortConfig, viewScope]);
+            }, [tablaLogs, sortConfig, viewScope]);
 
             return (
                 <div className="space-y-6 fade-in">
@@ -230,7 +255,7 @@
                             </div>
                             <div className="flex items-center gap-3 w-full md:w-auto">
                                 <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold whitespace-nowrap">Corte Operativo</span>
-                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto outline-none" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
+                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto outline-none text-teal-400 font-bold" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
                                     {periodos.length === 0 && <option>{periodoActivo}</option>}
                                     {periodos.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
@@ -259,7 +284,7 @@
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="glass-card p-6 flex flex-col items-center justify-center">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-6 w-full text-left">Distribución</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-6 w-full text-left">Distribución de Gastos</h3>
                             <div className="pie-chart w-48 h-48 md:w-56 md:h-56 mb-6 transition-all" style={{ background: construirConicGradient() }}></div>
                         </div>
                         <div className="glass-card p-6 overflow-y-auto max-h-80">
@@ -283,61 +308,117 @@
                         </div>
                     </div>
 
-                    <div className="glass-card overflow-x-auto">
-                        <table className="w-full text-left text-[11px] whitespace-nowrap">
-                            <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold select-none">
-                                <tr>
-                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Fecha_Compra')}>Fecha {sortConfig.key==='Fecha_Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Compra')}>Concepto {sortConfig.key==='Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 text-teal-400 cursor-pointer hover:text-white" onClick={() => requestSort('Categoria')}>Categoría {sortConfig.key==='Categoria'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Cuenta_Origen')}>Cuenta Origen {sortConfig.key==='Cuenta_Origen'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Monto_Total')}>Ticket Total {sortConfig.key==='Monto_Total'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Aporte')}>Aporte/Parcial {sortConfig.key==='Aporte'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                    <th className="p-3 text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-900">
-                                {sortedLogs.map((log, idx) => {
-                                    let aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi));
-                                    return (
-                                        <tr key={idx} className="hover:bg-zinc-900/50">
-                                            <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
-                                            <td className="p-3 font-bold text-zinc-200">{log.Compra}</td>
-                                            <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
-                                            <td className="p-3 text-zinc-500">{log.Cuenta_Origen}</td>
-                                            <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
-                                            <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
-                                            <td className="p-3 text-center">
-                                                {deletingLog === log.ID_Unico ? (
-                                                    <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
-                                                ) : (
-                                                    <div className="flex gap-3 justify-center items-center"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500">🗑️</button></div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                    <div className="glass-card overflow-hidden">
+                        <div className="p-4 border-b border-zinc-800 bg-zinc-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-3 w-full md:w-auto">
+                                <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Auditoría:</span>
+                                <select className="p-2 text-xs rounded bg-black outline-none border border-zinc-800 text-teal-400 font-bold w-full md:w-auto" value={tablaFiltroTipo} onChange={e=>setTablaFiltroTipo(e.target.value)}>
+                                    <option value="Gasto">Solo Gastos</option>
+                                    <option value="Ingreso">Solo Ingresos</option>
+                                    <option value="Transferencia">Solo Transferencias</option>
+                                    <option value="Todos">Ver Todos</option>
+                                </select>
+                            </div>
+                            <div className="w-full md:w-72">
+                                <input className="w-full p-2 text-xs rounded bg-black border border-zinc-800 outline-none text-zinc-300" placeholder="🔍 Buscar (#tags, concepto, monto...)" value={busqueda} onChange={e=>setBusqueda(e.target.value)} />
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-[11px] whitespace-nowrap">
+                                <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold select-none">
+                                    <tr>
+                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Fecha_Compra')}>Fecha {sortConfig.key==='Fecha_Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Compra')}>Concepto {sortConfig.key==='Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 text-teal-400 cursor-pointer hover:text-white" onClick={() => requestSort('Categoria')}>Categoría {sortConfig.key==='Categoria'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Cuenta_Origen')}>Cuenta (Flujo) {sortConfig.key==='Cuenta_Origen'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Monto_Total')}>Ticket Total {sortConfig.key==='Monto_Total'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Aporte')}>Aporte/Parcial {sortConfig.key==='Aporte'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
+                                        <th className="p-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-900">
+                                    {sortedLogs.map((log, idx) => {
+                                        let aporte = Number(log.Monto_Parcial) || 0;
+                                        if (log.Tipo_Operacion === 'Gasto') {
+                                            aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi));
+                                        }
+
+                                        let flujoStr = log.Cuenta_Origen;
+                                        if (log.Tipo_Operacion === 'Transferencia') flujoStr += ` ➔ ${log.Cuenta_Destino}`;
+
+                                        const colorFila = log.Tipo_Operacion === 'Ingreso' ? 'text-teal-400' : (log.Tipo_Operacion === 'Transferencia' ? 'text-indigo-400' : 'text-zinc-200');
+
+                                        return (
+                                            <tr key={idx} className="hover:bg-zinc-900/50">
+                                                <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
+                                                <td className={`p-3 font-bold ${colorFila}`}>{log.Compra} <span className="text-[8px] border border-zinc-700 px-1 rounded ml-1 text-zinc-500 uppercase">{log.Tipo_Operacion}</span></td>
+                                                <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
+                                                <td className="p-3 text-zinc-500">{flujoStr}</td>
+                                                <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
+                                                <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
+                                                <td className="p-3 text-center">
+                                                    {deletingLog === log.ID_Unico ? (
+                                                        <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
+                                                    ) : (
+                                                        <div className="flex gap-3 justify-center items-center"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500">🗑️</button></div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {sortedLogs.length === 0 && <tr><td colSpan="7" className="p-8 text-center text-zinc-600 font-mono">No se encontraron registros.</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             );
         };
 
-        // === PESTAÑA: PLAN ===
+        // === PESTAÑA: PLAN (REDISEÑO CON EDICIÓN EN LÍNEA) ===
         const BudgetEditor = ({ appData, setAppData, loadData }) => {
             const [planScope, setPlanScope] = useState('Compartido');
             const [saving, setSaving] = useState(false);
             const [success, setSuccess] = useState(false);
+            
+            // Estado para la NUEVA categoría
             const [formNew, setFormNew] = useState({ tipo: 'Gasto', macro: '', nombre: '' });
-            const [renamingCat, setRenamingCat] = useState(null);
-            const [tempName, setTempName] = useState('');
-            const [deletingCat, setDeletingCat] = useState(null);
+            
+            // Estados para EDICIÓN en línea de categorías existentes
+            const [editingCat, setEditingCat] = useState(null);
+            const [editForm, setEditForm] = useState({ oldName: '', nombre: '', macro: '', tipo: 'Gasto' });
 
             const handleSave = () => { if(!navigator.onLine) return alert("Necesitas conexión."); setSaving(true); apiCall('guardarPresupuestoGlobal', appData).then(() => { setSaving(false); setSuccess(true); setTimeout(() => setSuccess(false), 2500); }); };
-            const addCat = () => { const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General'; if(!navigator.onLine) return alert("Necesitas conexión."); if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) { apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData()); setFormNew({ ...formNew, nombre: '', macro: '' }); } };
-            const confirmRename = (old) => { const val = tempName.trim(); if(!navigator.onLine) return alert("Necesitas conexión."); if(val !== '' && val !== old) apiCall('renombrarCategoria', {oldName: old, newName: val}).then(()=>loadData()); setRenamingCat(null); };
-            const confirmDeleteCategory = (cat) => { if(!navigator.onLine) return alert("Necesitas conexión."); setDeletingCat(null); apiCall('eliminarCategoriaMaster', cat).then(() => loadData()); };
+            
+            const addCat = () => { 
+                const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General'; 
+                if(!navigator.onLine) return alert("Necesitas conexión."); 
+                if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) { 
+                    apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData()); 
+                    setFormNew({ ...formNew, nombre: '', macro: '' }); 
+                } 
+            };
+
+            const startEdit = (cat, macro, tipo) => {
+                setEditingCat(cat);
+                setEditForm({ oldName: cat, nombre: cat, macro: macro, tipo: tipo });
+            };
+
+            const saveEdit = () => {
+                if(!navigator.onLine) return alert("Necesitas conexión.");
+                if(!editForm.nombre.trim()) return;
+                setSaving(true);
+                apiCall('editarCategoriaMaster', {
+                    oldName: editForm.oldName, newName: editForm.nombre.trim(), 
+                    newMacro: editForm.macro.trim() || 'General', newTipo: editForm.tipo
+                }).then(() => {
+                    setEditingCat(null); loadData(); setSaving(false);
+                });
+            };
+
+            const confirmDeleteCategory = (cat) => { if(window.confirm(`¿Eliminar permanentemente la categoría "${cat}"?`)) { apiCall('eliminarCategoriaMaster', cat).then(() => loadData()); } };
+            
             const total = Object.values(appData.presupuesto[planScope] || {}).reduce((a, b) => a + b, 0);
 
             return (
@@ -352,7 +433,7 @@
                         <div className="text-right w-full md:w-auto">
                             <p className="text-[10px] text-teal-400 font-bold uppercase mb-1">Presupuesto {planScope}</p>
                             <p className="text-2xl font-black text-white mb-3">{formatoMoneda(total)}</p>
-                            <button disabled={saving || success} onClick={handleSave} className={`w-full md:w-auto px-6 py-2 rounded text-[10px] font-black uppercase transition-all ${success ? 'bg-teal-400 text-black' : 'bg-[#2dd4bf] text-black hover:bg-white'}`}>{saving ? 'Sincronizando...' : (success ? '✅ ¡Guardado!' : 'Guardar Cambios')}</button>
+                            <button disabled={saving || success} onClick={handleSave} className={`w-full md:w-auto px-6 py-2 rounded text-[10px] font-black uppercase transition-all ${success ? 'bg-teal-400 text-black' : 'bg-[#2dd4bf] text-black hover:bg-white'}`}>{saving ? 'Sincronizando...' : (success ? '✅ ¡Guardado!' : 'Guardar Presupuesto')}</button>
                         </div>
                     </div>
 
@@ -364,15 +445,42 @@
                                 <div key={tipo}>
                                     <h2 className="text-lg font-black text-white uppercase tracking-widest mb-4 border-b-2 border-zinc-700 pb-2">{tipo}S</h2>
                                     {macros.map(macro => (
-                                        <div key={macro} className="mb-4 ml-2">
+                                        <div key={macro} className="mb-6 ml-2">
                                             <h3 className="text-[10px] text-teal-500 font-bold uppercase tracking-widest mb-2">{macro}</h3>
                                             <div className="space-y-2">
-                                                {appData.arbolCat[tipo][macro].map(c => (
-                                                    <div key={c} className="flex justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50">
-                                                        <span className="text-[11px] uppercase text-zinc-300 font-medium pl-2 border-l-2 border-zinc-700">{c}</span>
-                                                        <div className="flex items-center gap-2"><span className="text-zinc-600 text-[10px]">$</span><input type="number" step="0.01" className="w-24 p-2 rounded text-xs text-right bg-black text-teal-400 font-bold outline-none" value={appData.presupuesto[planScope][c] || ''} onChange={e => setAppData({...appData, presupuesto: {...appData.presupuesto, [planScope]: {...appData.presupuesto[planScope], [c]: e.target.value === '' ? '' : Number(e.target.value)}}})} /></div>
-                                                    </div>
-                                                ))}
+                                                {appData.arbolCat[tipo][macro].map(c => {
+                                                    // MODO EDICIÓN EN LÍNEA
+                                                    if (editingCat === c) {
+                                                        return (
+                                                            <div key={c} className="flex flex-col md:flex-row gap-2 items-center bg-zinc-900 p-3 rounded border border-zinc-700">
+                                                                <select className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-teal-400 font-bold" value={editForm.tipo} onChange={e=>setEditForm({...editForm, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
+                                                                <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white" placeholder="Macro" value={editForm.macro} onChange={e=>setEditForm({...editForm, macro: e.target.value})} />
+                                                                <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white font-bold" placeholder="Nombre" value={editForm.nombre} onChange={e=>setForm({...editForm, nombre: e.target.value})} />
+                                                                <div className="flex gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
+                                                                    <button onClick={saveEdit} disabled={saving} className="bg-teal-500 text-black px-4 py-2 rounded text-xs font-bold hover:bg-white">{saving ? '...' : '✓'}</button>
+                                                                    <button onClick={()=>setEditingCat(null)} className="bg-zinc-800 text-zinc-400 px-3 py-2 rounded text-xs hover:text-white">✕</button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    // MODO LECTURA NORMAL
+                                                    return (
+                                                        <div key={c} className="flex flex-col md:flex-row justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50 group transition-all">
+                                                            <div className="flex items-center gap-3 w-full md:w-auto mb-2 md:mb-0">
+                                                                <span className="text-[11px] uppercase text-zinc-300 font-medium pl-2 border-l-2 border-zinc-700">{c}</span>
+                                                                <div className="md:opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                                                    <button onClick={()=>startEdit(c, macro, tipo)} className="text-zinc-500 hover:text-teal-400 text-xs">✏️</button>
+                                                                    <button onClick={()=>confirmDeleteCategory(c)} className="text-zinc-500 hover:text-rose-500 text-xs">🗑️</button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                                                                <span className="text-zinc-600 text-[10px]">$</span>
+                                                                <input type="number" step="0.01" className="w-24 p-2 rounded text-xs text-right bg-black text-teal-400 font-bold outline-none" value={appData.presupuesto[planScope][c] || ''} onChange={e => setAppData({...appData, presupuesto: {...appData.presupuesto, [planScope]: {...appData.presupuesto[planScope], [c]: e.target.value === '' ? '' : Number(e.target.value)}}})} />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))}
@@ -381,27 +489,14 @@
                         })}
                     </div>
 
+                    {/* BARRA DE CREACIÓN LIMPIA */}
                     <div className="border-t border-zinc-800 pt-8">
-                        <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-widest mb-4">Gestor de Categorías</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-6 bg-zinc-900 p-2 rounded">
-                            <select className="p-2 text-xs rounded bg-black outline-none" value={formNew.tipo} onChange={e=>setFormNew({...formNew, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
-                            <input className="p-2 text-xs rounded bg-black outline-none" placeholder="Macro" value={formNew.macro} onChange={e => setFormNew({...formNew, macro: e.target.value})} />
-                            <input className="p-2 text-xs rounded bg-black md:col-span-2 outline-none" placeholder="Nombre" value={formNew.nombre} onChange={e => setFormNew({...formNew, nombre: e.target.value})} onKeyDown={e=>e.key==='Enter'&&addCat()} />
-                            <button onClick={addCat} className="md:col-span-4 bg-zinc-800 p-2 text-[10px] font-bold uppercase rounded text-white hover:bg-teal-500">Añadir</button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {['Gasto', 'Ingreso'].flatMap(t => Object.values(appData.arbolCat[t] || {}).flat()).map(c => (
-                                <div key={c} className="bg-zinc-900 border border-zinc-800 px-3 py-1 rounded flex items-center gap-3 text-[10px]">
-                                    {renamingCat === c ? (
-                                        <input autoFocus className="bg-black text-teal-400 w-24 outline-none border-b border-teal-500" value={tempName} onChange={e=>setTempName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&confirmRename(c)} onBlur={()=>confirmRename(c)} />
-                                    ) : <span className="text-zinc-300 font-bold">{c}</span>}
-                                    {deletingCat === c ? (
-                                        <div className="flex gap-2 font-bold ml-2"><button onClick={()=>confirmDeleteCategory(c)} className="text-rose-500 px-1 bg-rose-500/10 rounded">SÍ</button><button onClick={()=>setDeletingCat(null)} className="text-zinc-500">NO</button></div>
-                                    ) : (
-                                        <div className="flex gap-2 border-l border-zinc-800 pl-2 ml-2"><button onClick={()=>{setRenamingCat(c); setTempName(c);}} className="text-zinc-500 hover:text-teal-400">✏️</button>{c !== 'Otro' && <button onClick={()=>setDeletingCat(c)} className="text-zinc-500 hover:text-rose-500">🗑️</button>}</div>
-                                    )}
-                                </div>
-                            ))}
+                        <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-widest mb-4">Crear Nueva Categoría</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-zinc-900 p-2 rounded border border-zinc-800">
+                            <select className="p-2 text-xs rounded bg-black outline-none text-teal-400 font-bold" value={formNew.tipo} onChange={e=>setFormNew({...formNew, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
+                            <input className="p-2 text-xs rounded bg-black outline-none" placeholder="Macro (Ej. Fijos)" value={formNew.macro} onChange={e => setFormNew({...formNew, macro: e.target.value})} />
+                            <input className="p-2 text-xs rounded bg-black md:col-span-2 outline-none" placeholder="Nombre de Categoría" value={formNew.nombre} onChange={e => setFormNew({...formNew, nombre: e.target.value})} onKeyDown={e=>e.key==='Enter'&&addCat()} />
+                            <button onClick={addCat} className="md:col-span-4 bg-zinc-800 p-3 text-[10px] font-bold uppercase rounded text-white hover:bg-teal-500 mt-2">Añadir al Sistema</button>
                         </div>
                     </div>
                 </div>
