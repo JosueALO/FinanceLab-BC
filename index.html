@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#050505">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUyJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyMjAiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IiMyZGQ0YmYiPkZMPC90ZXh0Pjwvc3ZnPg==">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -34,7 +32,7 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        const API_URL = "https://script.google.com/macros/s/AKfycbweLm3Vqu8_9LusW0Y24jzkzw2IuTr7XHoWyuSKN_kIfJshRdkWXpV34tdjmmYUg2Yv/exec"; // <--- REEMPLAZA ESTO
+        const API_URL = "AQUI_PEGA_TU_URL_DE_APPS_SCRIPT"; // <--- REEMPLAZA ESTO
 
         const apiCall = async (action, payload = null) => {
             const response = await fetch(API_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, payload }) });
@@ -45,15 +43,19 @@
 
         const COLORES_PASTEL = ['#2dd4bf', '#0ea5e9', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#14b8a6', '#6366f1'];
         const getHoyStr = () => { const hoy = new Date(); const offset = hoy.getTimezoneOffset() * 60000; return (new Date(hoy - offset)).toISOString().split('T')[0]; };
+        
+        // Helper para estandarizar moneda
+        const formatoMoneda = (num) => Number(num).toLocaleString('es-MX', {style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         // === PESTAÑA: GESTOR DE CUENTAS ===
         const CuentasManager = ({ cuentas, logs, loadData }) => {
             const [localCuentas, setLocalCuentas] = useState(cuentas);
             const [saving, setSaving] = useState(false);
-            const [form, setForm] = useState({ nombre: '', tipo: 'Activo', saldoInicial: 0, propietario: 'Josué', diaCorte: 0 });
+            const [form, setForm] = useState({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' });
 
-            const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = (field === 'saldoInicial' || field === 'diaCorte') ? Number(val) : val; setLocalCuentas(updated); };
-            const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim(), diaCorte: Number(form.diaCorte) }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: 0, propietario: 'Josué', diaCorte: 0 }); };
+            // BUG FIX: Permitir campos vacíos sin forzar un "0" instantáneo
+            const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = val; setLocalCuentas(updated); };
+            const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim() }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' }); };
             const eliminarCuenta = (nombre) => { if (confirm(`¿Eliminar la cuenta ${nombre}?`)) setLocalCuentas(localCuentas.filter(c => c.nombre !== nombre)); };
             const guardar = () => { setSaving(true); apiCall('guardarCuentas', localCuentas).then(() => { setSaving(false); loadData(); }); };
 
@@ -68,15 +70,19 @@
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Nombre</label><input className="w-full p-2 text-xs rounded" placeholder="Ej. Nu" value={form.nombre} onChange={e=>setForm({...form, nombre: e.target.value})} /></div>
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Tipo</label><select className="w-full p-2 text-xs rounded" value={form.tipo} onChange={e=>setForm({...form, tipo: e.target.value})}><option>Activo</option><option>Pasivo</option></select></div>
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Propietario</label><select className="w-full p-2 text-xs rounded" value={form.propietario} onChange={e=>setForm({...form, propietario: e.target.value})}><option>Josué</option><option>Abi</option><option>Hogar</option></select></div>
-                        <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Día Corte (0=Fin Mes)</label><input type="number" className="w-full p-2 text-xs rounded" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} /></div>
-                        <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Inicial</label><div className="flex gap-2"><input type="number" className="w-full p-2 text-xs rounded font-mono text-teal-400" value={form.saldoInicial} onChange={e=>setForm({...form, saldoInicial: e.target.value})} /><button onClick={agregarCuenta} className="bg-zinc-800 px-4 rounded text-white font-bold hover:bg-teal-500">+</button></div></div>
+                        <div>
+                            <label className="text-[9px] uppercase text-zinc-500 mb-1 block">Día Corte</label>
+                            {form.tipo === 'Pasivo' ? <input type="number" className="w-full p-2 text-xs rounded" placeholder="Ej. 19" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} /> : <div className="w-full p-2 text-xs rounded bg-black text-zinc-600 cursor-not-allowed">N/A</div>}
+                        </div>
+                        <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Inicial</label><div className="flex gap-2"><input type="number" step="0.01" className="w-full p-2 text-xs rounded font-mono text-teal-400" placeholder="0.00" value={form.saldoInicial} onChange={e=>setForm({...form, saldoInicial: e.target.value})} /><button onClick={agregarCuenta} className="bg-zinc-800 px-4 rounded text-white font-bold hover:bg-teal-500">+</button></div></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {localCuentas.map((c, i) => {
-                            let balance = c.saldoInicial;
+                            let balance = Number(c.saldoInicial) || 0;
                             logs.forEach(l => {
-                                const m = Number(l.Monto_Total) || 0;
+                                // BUG FIX: Usar Monto_Parcial para no duplicar deudas a MSI
+                                const m = Number(l.Monto_Parcial) || 0;
                                 if (l.Cuenta_Origen === c.nombre) {
                                     if (l.Tipo_Operacion === 'Gasto' || l.Tipo_Operacion === 'Transferencia') balance -= m;
                                     else if (l.Tipo_Operacion === 'Ingreso') balance += m;
@@ -89,14 +95,19 @@
                                     <div className="flex justify-between pr-4">
                                         <input className="bg-transparent font-bold text-teal-400 outline-none w-1/2" value={c.nombre} onChange={e=>handleEdit(i, 'nombre', e.target.value)} />
                                         <div className="flex flex-col items-end">
-                                            <select className="bg-transparent text-[9px] uppercase text-zinc-500" value={c.propietario} onChange={e=>handleEdit(i, 'propietario', e.target.value)}><option>Josué</option><option>Abi</option><option>Hogar</option></select>
+                                            <select className="bg-transparent text-[9px] uppercase text-zinc-500 text-right outline-none" value={c.propietario} onChange={e=>handleEdit(i, 'propietario', e.target.value)}><option>Josué</option><option>Abi</option><option>Hogar</option></select>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <div className="flex-1"><label className="text-[8px] text-zinc-600 block uppercase">Inicial</label><input type="number" className="bg-transparent font-mono text-sm w-full border-b border-zinc-800 outline-none" value={c.saldoInicial} onChange={e=>handleEdit(i, 'saldoInicial', e.target.value)} /></div>
-                                        <div className="flex-1"><label className="text-[8px] text-zinc-600 block uppercase">Corte</label><input type="number" className="bg-transparent font-mono text-sm w-full border-b border-zinc-800 outline-none" value={c.diaCorte} onChange={e=>handleEdit(i, 'diaCorte', e.target.value)} /></div>
+                                        <div className="flex-1"><label className="text-[8px] text-zinc-600 block uppercase">Inicial</label><input type="number" step="0.01" className="bg-transparent font-mono text-sm w-full border-b border-zinc-800 outline-none" value={c.saldoInicial} onChange={e=>handleEdit(i, 'saldoInicial', e.target.value)} /></div>
+                                        <div className="flex-1"><label className="text-[8px] text-zinc-600 block uppercase">Corte</label>
+                                            {c.tipo === 'Pasivo' ? <input type="number" className="bg-transparent font-mono text-sm w-full border-b border-zinc-800 outline-none" value={c.diaCorte} onChange={e=>handleEdit(i, 'diaCorte', e.target.value)} /> : <span className="font-mono text-sm text-zinc-500">N/A</span>}
+                                        </div>
                                     </div>
-                                    <div className="border-t border-zinc-800 pt-2"><label className="text-[9px] text-zinc-600 block uppercase">Balance Actual</label><p className={`font-mono font-bold text-lg ${c.tipo==='Pasivo'?'text-rose-400':'text-white'}`}>${balance.toLocaleString()}</p></div>
+                                    <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
+                                        <span className={`text-[8px] uppercase px-2 py-1 rounded ${c.tipo==='Pasivo'?'bg-rose-500/20 text-rose-400':'bg-teal-500/20 text-teal-400'}`}>{c.tipo}</span>
+                                        <p className={`font-mono font-bold text-lg ${c.tipo==='Pasivo'?'text-rose-400':'text-white'}`}>{formatoMoneda(balance)}</p>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -111,7 +122,6 @@
             const [deletingLog, setDeletingLog] = useState(null);
 
             const mapCuentas = useMemo(() => { let map = {}; cuentas.forEach(c => map[c.nombre] = c.propietario); return map; }, [cuentas]);
-
             const periodos = useMemo(() => [...new Set(rawLogs.map(l => l.Periodo_Pago))].filter(Boolean).sort((a, b) => { try { const pA = String(a).split('/'); const pB = String(b).split('/'); return new Date(pB[2], pB[1]-1, pB[0]) - new Date(pA[2], pA[1]-1, pA[0]); } catch(e) { return 0; } }), [rawLogs]);
             const getPeriodoActual = () => { const hoy = new Date(); let m = hoy.getMonth(), a = hoy.getFullYear(); if (hoy.getDate() > 19) m += 1; const u = new Date(a, m + 1, 0); return `${String(u.getDate()).padStart(2, '0')}/${String(u.getMonth() + 1).padStart(2, '0')}/${u.getFullYear()}`; };
             const [periodoActivo, setPeriodoActivo] = useState(periodos.includes(getPeriodoActual()) ? getPeriodoActual() : (periodos[0] || getPeriodoActual()));
@@ -120,10 +130,8 @@
             useEffect(() => { setHiddenTipos([]); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
-            
-            // Oculta Transferencias del Gráfico/Tabla de Gastos
             const logsScope = useMemo(() => logsGlobal.filter(l => {
-                if (l.Tipo_Operacion === 'Transferencia' || l.Tipo_Operacion === 'Ingreso') return false;
+                if (l.Tipo_Operacion === 'Transferencia' || l.Tipo_Operacion === 'Ingreso') return false; 
                 if (viewScope === 'Compartido') return !l.Tipo_Gasto.includes('Personal');
                 if (viewScope === 'Josue') return Number(l.Participacion_Josue) > 0;
                 if (viewScope === 'Abi') return Number(l.Participacion_Abi) > 0;
@@ -133,7 +141,6 @@
             const availableTipos = useMemo(() => [...new Set(logsScope.map(l => l.Tipo_Gasto))], [logsScope]);
             const logsFiltered = useMemo(() => logsScope.filter(l => !hiddenTipos.includes(l.Tipo_Gasto)), [logsScope, hiddenTipos]);
 
-            // CÁLCULO DE DEUDA INTELIGENTE
             const deudaAbi = logsGlobal.reduce((acc, curr) => {
                 const monto = Number(curr.Monto_Parcial) || 0;
                 if (curr.Tipo_Operacion === 'Transferencia') {
@@ -150,11 +157,11 @@
                 return acc;
             }, 0);
 
-            const totalGastoView = logsFiltered.reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
+            const totalGastoView = logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
 
             const categoriasData = useMemo(() => {
                 let map = {};
-                logsFiltered.forEach(l => {
+                logsFiltered.filter(l=>l.Tipo_Operacion==='Gasto').forEach(l => {
                     let amt = viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi));
                     if (amt > 0) map[l.Categoria] = (map[l.Categoria] || 0) + amt;
                 });
@@ -188,7 +195,7 @@
                             </div>
                             <div className="flex items-center gap-3 w-full md:w-auto">
                                 <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold whitespace-nowrap">Corte Operativo</span>
-                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
+                                <select className="p-2 text-sm bg-zinc-900 rounded border border-zinc-800 w-full md:w-auto outline-none" value={periodoActivo} onChange={e => setPeriodoActivo(e.target.value)}>
                                     {periodos.length === 0 && <option>{periodoActivo}</option>}
                                     {periodos.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
@@ -207,11 +214,11 @@
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="glass-card p-6">
                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Gasto {viewScope}</p>
-                            <p className="text-3xl font-bold accent-glow mt-1">${totalGastoView.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                            <p className="text-3xl font-bold accent-glow mt-1">{formatoMoneda(totalGastoView)}</p>
                         </div>
                         <div className={`glass-card p-6 border-l-4 ${deudaAbi === 0 ? 'border-teal-500' : (deudaAbi > 0 ? 'border-rose-500' : 'border-amber-500')}`}>
                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Estado Global (Hogar)</p>
-                            <p className={`text-2xl font-bold mt-1 ${deudaAbi === 0 ? 'text-teal-400' : 'text-white'}`}>{deudaAbi === 0 ? 'Saldado ✓' : (deudaAbi > 0 ? `Abi debe $${deudaAbi.toLocaleString('es-MX', {minimumFractionDigits: 2})}` : `Josué debe $${Math.abs(deudaAbi).toLocaleString('es-MX', {minimumFractionDigits: 2})}`)}</p>
+                            <p className={`text-2xl font-bold mt-1 ${deudaAbi === 0 ? 'text-teal-400' : 'text-white'}`}>{deudaAbi === 0 ? 'Saldado ✓' : (deudaAbi > 0 ? `Abi debe ${formatoMoneda(deudaAbi)}` : `Josué debe ${formatoMoneda(Math.abs(deudaAbi))}`)}</p>
                         </div>
                     </div>
 
@@ -229,7 +236,7 @@
                                         <li key={cat} className="text-xs">
                                             <div className="flex justify-between items-center mb-1">
                                                 <div className="flex items-center gap-3"><span className="w-4 h-4 rounded-full" style={{backgroundColor: gastado > 0 ? COLORES_PASTEL[i % COLORES_PASTEL.length] : '#333'}}></span><span className="text-zinc-300 font-medium">{cat}</span></div>
-                                                <div className="text-right"><span className={`font-mono ${meta > 0 && pct > 100 ? 'text-rose-500' : 'text-teal-400'}`}>${gastado.toLocaleString('es-MX')}</span>{meta > 0 && <span className="text-[9px] text-zinc-500"> / ${meta.toLocaleString()}</span>}</div>
+                                                <div className="text-right"><span className={`font-mono ${meta > 0 && pct > 100 ? 'text-rose-500' : 'text-teal-400'}`}>{formatoMoneda(gastado)}</span>{meta > 0 && <span className="text-[9px] text-zinc-500"> / {formatoMoneda(meta)}</span>}</div>
                                             </div>
                                             {meta > 0 && (
                                                 <div className="flex items-center gap-3 mt-2"><div className="progress-bar flex-grow"><div className="progress-fill" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 100 ? '#f43f5e' : '#2dd4bf' }}></div></div><span className="text-[9px] font-mono font-bold w-10 text-right text-zinc-400">{pct.toFixed(1)}%</span></div>
@@ -244,7 +251,7 @@
                     <div className="glass-card overflow-x-auto">
                         <table className="w-full text-left text-[11px] whitespace-nowrap">
                             <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold">
-                                <tr><th className="p-3">Fecha</th><th className="p-3">Concepto</th><th className="p-3 text-teal-400">Categoría</th><th className="p-3">Cuenta Origen</th><th className="p-3">Ticket</th><th className="p-3">Aporte</th><th className="p-3 text-center">Acciones</th></tr>
+                                <tr><th className="p-3">Fecha</th><th className="p-3">Concepto</th><th className="p-3 text-teal-400">Categoría</th><th className="p-3">Cuenta Origen</th><th className="p-3">Ticket Total</th><th className="p-3">Aporte/Parcial</th><th className="p-3 text-center">Acciones</th></tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-900">
                                 {logsFiltered.slice().reverse().map((log, idx) => {
@@ -255,8 +262,8 @@
                                             <td className="p-3 font-bold text-zinc-200">{log.Compra}</td>
                                             <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
                                             <td className="p-3 text-zinc-500">{log.Cuenta_Origen}</td>
-                                            <td className="p-3 font-mono text-zinc-500">${Number(log.Monto_Parcial).toLocaleString()}</td>
-                                            <td className="p-3 font-mono text-teal-400">${aporte.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                                            <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
+                                            <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
                                             <td className="p-3 text-center">
                                                 {deletingLog === log.ID_Unico ? (
                                                     <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
@@ -284,28 +291,9 @@
             const [tempName, setTempName] = useState('');
             const [deletingCat, setDeletingCat] = useState(null);
 
-            const handleSave = () => {
-                if(!navigator.onLine) return alert("Necesitas conexión.");
-                setSaving(true);
-                apiCall('guardarPresupuestoGlobal', appData).then(() => { setSaving(false); setSuccess(true); setTimeout(() => setSuccess(false), 2500); });
-            };
-
-            const addCat = () => {
-                const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General';
-                if(!navigator.onLine) return alert("Necesitas conexión.");
-                if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) {
-                    apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData());
-                    setFormNew({ ...formNew, nombre: '', macro: '' });
-                }
-            };
-
-            const confirmRename = (old) => {
-                const val = tempName.trim();
-                if(!navigator.onLine) return alert("Necesitas conexión.");
-                if(val !== '' && val !== old) apiCall('renombrarCategoria', {oldName: old, newName: val}).then(()=>loadData());
-                setRenamingCat(null);
-            };
-
+            const handleSave = () => { if(!navigator.onLine) return alert("Necesitas conexión."); setSaving(true); apiCall('guardarPresupuestoGlobal', appData).then(() => { setSaving(false); setSuccess(true); setTimeout(() => setSuccess(false), 2500); }); };
+            const addCat = () => { const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General'; if(!navigator.onLine) return alert("Necesitas conexión."); if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) { apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData()); setFormNew({ ...formNew, nombre: '', macro: '' }); } };
+            const confirmRename = (old) => { const val = tempName.trim(); if(!navigator.onLine) return alert("Necesitas conexión."); if(val !== '' && val !== old) apiCall('renombrarCategoria', {oldName: old, newName: val}).then(()=>loadData()); setRenamingCat(null); };
             const confirmDeleteCategory = (cat) => { if(!navigator.onLine) return alert("Necesitas conexión."); setDeletingCat(null); apiCall('eliminarCategoriaMaster', cat).then(() => loadData()); };
             const total = Object.values(appData.presupuesto[planScope] || {}).reduce((a, b) => a + b, 0);
 
@@ -320,10 +308,8 @@
                         </div>
                         <div className="text-right w-full md:w-auto">
                             <p className="text-[10px] text-teal-400 font-bold uppercase mb-1">Presupuesto {planScope}</p>
-                            <p className="text-2xl font-black text-white mb-3">${total.toLocaleString()}</p>
-                            <button disabled={saving || success} onClick={handleSave} className={`w-full md:w-auto px-6 py-2 rounded text-[10px] font-black uppercase transition-all ${success ? 'bg-teal-400 text-black' : 'bg-[#2dd4bf] text-black hover:bg-white'}`}>
-                                {saving ? 'Sincronizando...' : (success ? '✅ ¡Guardado!' : 'Guardar Cambios')}
-                            </button>
+                            <p className="text-2xl font-black text-white mb-3">{formatoMoneda(total)}</p>
+                            <button disabled={saving || success} onClick={handleSave} className={`w-full md:w-auto px-6 py-2 rounded text-[10px] font-black uppercase transition-all ${success ? 'bg-teal-400 text-black' : 'bg-[#2dd4bf] text-black hover:bg-white'}`}>{saving ? 'Sincronizando...' : (success ? '✅ ¡Guardado!' : 'Guardar Cambios')}</button>
                         </div>
                     </div>
 
@@ -341,7 +327,7 @@
                                                 {appData.arbolCat[tipo][macro].map(c => (
                                                     <div key={c} className="flex justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50">
                                                         <span className="text-[11px] uppercase text-zinc-300 font-medium pl-2 border-l-2 border-zinc-700">{c}</span>
-                                                        <div className="flex items-center gap-2"><span className="text-zinc-600 text-[10px]">$</span><input type="number" className="w-24 p-2 rounded text-xs text-right bg-black text-teal-400 font-bold" value={appData.presupuesto[planScope][c] || ''} onChange={e => setAppData({...appData, presupuesto: {...appData.presupuesto, [planScope]: {...appData.presupuesto[planScope], [c]: Number(e.target.value)}}})} /></div>
+                                                        <div className="flex items-center gap-2"><span className="text-zinc-600 text-[10px]">$</span><input type="number" step="0.01" className="w-24 p-2 rounded text-xs text-right bg-black text-teal-400 font-bold" value={appData.presupuesto[planScope][c] || ''} onChange={e => setAppData({...appData, presupuesto: {...appData.presupuesto, [planScope]: {...appData.presupuesto[planScope], [c]: Number(e.target.value)}}})} /></div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -358,7 +344,7 @@
                             <select className="p-2 text-xs rounded bg-black" value={formNew.tipo} onChange={e=>setFormNew({...formNew, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
                             <input className="p-2 text-xs rounded bg-black" placeholder="Macro" value={formNew.macro} onChange={e => setFormNew({...formNew, macro: e.target.value})} />
                             <input className="p-2 text-xs rounded bg-black md:col-span-2" placeholder="Nombre" value={formNew.nombre} onChange={e => setFormNew({...formNew, nombre: e.target.value})} onKeyDown={e=>e.key==='Enter'&&addCat()} />
-                            <button onClick={addCat} className="md:col-span-4 bg-zinc-800 p-2 text-xs rounded font-bold text-white hover:bg-teal-500">Añadir</button>
+                            <button onClick={addCat} className="md:col-span-4 bg-zinc-800 p-2 text-[10px] font-bold uppercase rounded text-white hover:bg-teal-500">Añadir</button>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {['Gasto', 'Ingreso'].flatMap(t => Object.values(appData.arbolCat[t] || {}).flat()).map(c => (
@@ -379,6 +365,7 @@
             );
         };
 
+        // === PESTAÑA: REGISTRO ===
         const App = () => {
             const [view, setView] = useState('registro'); 
             const [loadingInitial, setLoadingInitial] = useState(true);
@@ -435,7 +422,7 @@
                 }
                 setForm({ 
                     id_edit: log.ID_Unico, tipoOperacion: log.Tipo_Operacion || 'Gasto', fechaCompra: `${y}-${m}-${d}`, 
-                    registrador: log.Registrador, compra: log.Compra, monto: log.Monto_Parcial, 
+                    registrador: log.Registrador, compra: log.Compra, monto: log.Monto_Total, // BUG FIX: Usar Total al editar para evitar dividir la división
                     macroCategoria: log.MacroCategoria || '', categoria: log.Categoria, 
                     cuentaOrigen: log.Cuenta_Origen, cuentaDestino: log.Cuenta_Destino || '', tipoGasto: parseTipo || 'Compartido (50/50)', msi: '1' 
                 });
@@ -480,7 +467,7 @@
                         </nav>
                     </header>
 
-                    {loadingInitial && view !== 'registro' ? <div className="text-center mt-20 font-mono text-zinc-500 animate-pulse">Sincronizando...</div> : (
+                    {loadingInitial && view !== 'registro' ? <div className="text-center mt-20 font-mono text-zinc-500 animate-pulse">Sincronizando Core...</div> : (
                         view === 'registro' ? (
                             <div className="glass-card p-6 md:p-8 max-w-2xl mx-auto fade-in">
                                 <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-2">
@@ -491,48 +478,57 @@
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Tipo Operación</label>
-                                            <select className="w-full p-3 rounded text-xs font-bold text-teal-400" value={form.tipoOperacion} onChange={e => {
+                                            <select className="w-full p-3 rounded text-xs font-bold text-teal-400 outline-none" value={form.tipoOperacion} onChange={e => {
                                                 const t = e.target.value; const defaultMacro = Object.keys(appData.arbolCat[t]||{})[0] || '';
                                                 setForm({...form, tipoOperacion: t, macroCategoria: defaultMacro, categoria: appData.arbolCat[t]?.[defaultMacro]?.[0] || ''});
                                             }}><option>Gasto</option><option>Ingreso</option><option>Transferencia</option></select>
                                         </div>
-                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Fecha</label><input type="date" className="w-full p-3 rounded font-mono text-xs" value={form.fechaCompra} onChange={e => setForm({...form, fechaCompra: e.target.value})} /></div>
+                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Fecha</label><input type="date" className="w-full p-3 rounded font-mono text-xs outline-none" value={form.fechaCompra} onChange={e => setForm({...form, fechaCompra: e.target.value})} /></div>
                                     </div>
 
                                     {(form.tipoOperacion === 'Gasto' || form.tipoOperacion === 'Ingreso') && (
                                         <div className="grid grid-cols-2 gap-4 bg-zinc-900/50 p-3 rounded border border-zinc-800 fade-in">
-                                            <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Macro</label><select className="w-full p-2 rounded text-xs" value={form.macroCategoria} onChange={e => setForm({...form, macroCategoria: e.target.value, categoria: appData.arbolCat[form.tipoOperacion]?.[e.target.value]?.[0] || ''})}>{Object.keys(appData.arbolCat[form.tipoOperacion]||{}).map(m=><option key={m}>{m}</option>)}</select></div>
-                                            <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Sub-Categoría</label><select className="w-full p-2 rounded text-xs" value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})}>{(appData.arbolCat[form.tipoOperacion]?.[form.macroCategoria]||[]).map(c=><option key={c}>{c}</option>)}</select></div>
+                                            <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Macro</label><select className="w-full p-2 rounded text-xs outline-none" value={form.macroCategoria} onChange={e => setForm({...form, macroCategoria: e.target.value, categoria: appData.arbolCat[form.tipoOperacion]?.[e.target.value]?.[0] || ''})}>{Object.keys(appData.arbolCat[form.tipoOperacion]||{}).map(m=><option key={m}>{m}</option>)}</select></div>
+                                            <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Sub-Categoría</label><select className="w-full p-2 rounded text-xs outline-none" value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})}>{(appData.arbolCat[form.tipoOperacion]?.[form.macroCategoria]||[]).map(c=><option key={c}>{c}</option>)}</select></div>
                                         </div>
                                     )}
 
-                                    <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Descripción</label><input className="w-full p-3 rounded" placeholder="Concepto..." value={form.compra} onChange={e => setForm({...form, compra: e.target.value})} /></div>
+                                    <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Descripción</label><input className="w-full p-3 rounded outline-none text-xs" placeholder="Concepto..." value={form.compra} onChange={e => setForm({...form, compra: e.target.value})} /></div>
                                     
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Monto Total</label><input type="number" step="0.01" className="w-full p-3 rounded font-mono text-xl text-white" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} /></div>
-                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Registrador</label><select className="w-full p-3 rounded text-xs" value={form.registrador} onChange={e => setForm({...form, registrador: e.target.value})}><option>Josué</option><option>Abigail</option></select></div>
+                                        <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold flex justify-between items-center">
+                                                Monto Total
+                                                <span className="text-teal-500 font-mono text-[9px]">{form.monto ? formatoMoneda(form.monto) : ''}</span>
+                                            </label>
+                                            <input type="number" step="0.01" className="w-full p-3 rounded font-mono text-lg text-white outline-none" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} />
+                                        </div>
+                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Registrador</label><select className="w-full p-3 rounded text-xs outline-none" value={form.registrador} onChange={e => setForm({...form, registrador: e.target.value})}><option>Josué</option><option>Abigail</option></select></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">{form.tipoOperacion === 'Transferencia' ? 'Cuenta ORIGEN' : 'Cuenta / Método'}</label><select className="w-full p-3 rounded text-xs" value={form.cuentaOrigen} onChange={e => setForm({...form, cuentaOrigen: e.target.value})}>{appData.cuentas.map(c=><option key={c.nombre}>{c.nombre}</option>)}</select></div>
+                                        <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">{form.tipoOperacion === 'Transferencia' ? 'Cuenta ORIGEN' : 'Cuenta / Método'}</label>
+                                            <select className="w-full p-3 rounded text-xs outline-none" value={form.cuentaOrigen} onChange={e => setForm({...form, cuentaOrigen: e.target.value})}>{appData.cuentas.map(c=><option key={c.nombre}>{c.nombre}</option>)}</select>
+                                        </div>
                                         {form.tipoOperacion === 'Transferencia' ? (
-                                            <div className="fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Cuenta DESTINO</label><select className="w-full p-3 rounded text-xs" value={form.cuentaDestino} onChange={e => setForm({...form, cuentaDestino: e.target.value})}>{appData.cuentas.map(c=><option key={c.nombre}>{c.nombre}</option>)}</select></div>
+                                            <div className="fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Cuenta DESTINO</label><select className="w-full p-3 rounded text-xs outline-none" value={form.cuentaDestino} onChange={e => setForm({...form, cuentaDestino: e.target.value})}>{appData.cuentas.map(c=><option key={c.nombre}>{c.nombre}</option>)}</select></div>
                                         ) : form.tipoOperacion === 'Gasto' ? (
-                                            <div className="fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Distribución</label><select className="w-full p-3 rounded text-xs" value={form.tipoGasto} onChange={e => setForm({...form, tipoGasto: e.target.value})}><option>Compartido (50/50)</option><option value="Proporcional">Proporcional</option><option>Personal Josué</option><option>Personal Abi</option></select></div>
+                                            <div className="fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Distribución</label><select className="w-full p-3 rounded text-xs outline-none" value={form.tipoGasto} onChange={e => setForm({...form, tipoGasto: e.target.value})}><option>Compartido (50/50)</option><option value="Proporcional">Proporcional</option><option>Personal Josué</option><option>Personal Abi</option></select></div>
                                         ) : <div/>}
                                     </div>
 
                                     {form.tipoOperacion === 'Gasto' && form.tipoGasto === 'Proporcional' && (
                                         <div className="grid grid-cols-2 gap-4 p-4 bg-zinc-900 rounded border border-zinc-800 fade-in">
-                                            <div><label className="text-[9px] text-zinc-400 uppercase block mb-1">Josué (%)</label><input type="number" className="w-full p-2 rounded text-xs bg-black text-teal-400 font-bold" value={configProporcion.josue} onChange={e => { setConfigProporcion({ josue: Number(e.target.value), abi: 100 - Number(e.target.value) }); }} /></div>
-                                            <div><label className="text-[9px] text-zinc-400 uppercase block mb-1">Abi (%)</label><input type="number" className="w-full p-2 rounded text-xs bg-black text-teal-400 font-bold" value={configProporcion.abi} onChange={e => { setConfigProporcion({ josue: 100 - Number(e.target.value), abi: Number(e.target.value) }); }} /></div>
+                                            <div><label className="text-[9px] text-zinc-400 uppercase block mb-1">Josué (%)</label><input type="number" min="0" max="100" className="w-full p-2 rounded text-xs bg-black text-teal-400 font-bold outline-none" value={configProporcion.josue} onChange={e => { setConfigProporcion({ josue: Number(e.target.value), abi: 100 - Number(e.target.value) }); }} /></div>
+                                            <div><label className="text-[9px] text-zinc-400 uppercase block mb-1">Abi (%)</label><input type="number" min="0" max="100" className="w-full p-2 rounded text-xs bg-black text-teal-400 font-bold outline-none" value={configProporcion.abi} onChange={e => { setConfigProporcion({ josue: 100 - Number(e.target.value), abi: Number(e.target.value) }); }} /></div>
                                         </div>
                                     )}
 
                                     {!form.id_edit && form.tipoOperacion === 'Gasto' && (
-                                        <div className="border-t border-zinc-800 pt-5 fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold flex justify-between"><span>Meses sin intereses (Opcional)</span></label><input type="number" min="1" className="w-full p-3 rounded font-mono max-w-[150px]" value={form.msi} onChange={e => setForm({...form, msi: e.target.value})} /></div>
+                                        <div className="border-t border-zinc-800 pt-5 fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold flex justify-between"><span>Meses sin intereses (Opcional)</span></label><input type="number" min="1" max="24" className="w-full p-3 rounded font-mono max-w-[150px] outline-none" value={form.msi} onChange={e => setForm({...form, msi: e.target.value})} /></div>
                                     )}
 
-                                    <button disabled={savingGasto || showSuccess || showOffline} onClick={saveGasto} className={`w-full font-black p-4 rounded mt-4 uppercase tracking-[0.2em] text-xs transition-all shadow-[0_0_15px_rgba(45,212,191,0.2)] ${showOffline ? 'bg-amber-500 text-black' : (showSuccess ? 'bg-teal-400 text-black' : (form.id_edit ? 'bg-teal-500 text-black hover:bg-white' : 'bg-[#2dd4bf] text-black hover:bg-white'))}`}>
+                                    <button disabled={savingGasto || showSuccess || showOffline} onClick={saveGasto} className={`w-full font-black p-4 rounded mt-4 uppercase tracking-[0.2em] text-xs transition-all shadow-[0_0_15px_rgba(45,212,191,0.2)] outline-none ${showOffline ? 'bg-amber-500 text-black' : (showSuccess ? 'bg-teal-400 text-black' : (form.id_edit ? 'bg-teal-500 text-black hover:bg-white' : 'bg-[#2dd4bf] text-black hover:bg-white'))}`}>
                                         {savingGasto ? 'Sincronizando...' : (showOffline ? '💾 Guardado (Offline)' : (showSuccess ? '✅ ¡Éxito!' : (form.id_edit ? 'Actualizar Operación' : 'Asentar Operación')))}
                                     </button>
                                 </div>
