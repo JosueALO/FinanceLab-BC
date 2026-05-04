@@ -43,7 +43,6 @@
 
         const COLORES_PASTEL = ['#2dd4bf', '#0ea5e9', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#14b8a6', '#6366f1'];
         const getHoyStr = () => { const hoy = new Date(); const offset = hoy.getTimezoneOffset() * 60000; return (new Date(hoy - offset)).toISOString().split('T')[0]; };
-        
         const formatoMoneda = (num) => Number(num || 0).toLocaleString('es-MX', {style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         // === PESTAÑA: GESTOR DE CUENTAS ===
@@ -54,7 +53,7 @@
 
             const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = val; setLocalCuentas(updated); };
             const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim() }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' }); };
-            const eliminarCuenta = (nombre) => { if (window.confirm(`¿Eliminar la cuenta ${nombre}?`)) setLocalCuentas(localCuentas.filter(c => c.nombre !== nombre)); };
+            const eliminarCuenta = (nombre) => { if (confirm(`¿Eliminar la cuenta ${nombre}?`)) setLocalCuentas(localCuentas.filter(c => c.nombre !== nombre)); };
             const guardar = () => { setSaving(true); apiCall('guardarCuentas', localCuentas).then(() => { setSaving(false); loadData(); }); };
 
             return (
@@ -70,7 +69,11 @@
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Propietario</label><select className="w-full p-2 text-xs rounded bg-black" value={form.propietario} onChange={e=>setForm({...form, propietario: e.target.value})}><option>Josué</option><option>Abi</option><option>Hogar</option></select></div>
                         <div>
                             <label className="text-[9px] uppercase text-zinc-500 mb-1 block">Día Corte</label>
-                            {form.tipo === 'Pasivo' ? <input type="number" className="w-full p-2 text-xs rounded bg-black" placeholder="Ej. 19" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} /> : <div className="w-full p-2 text-xs rounded bg-black text-zinc-600 font-mono cursor-not-allowed text-center">N/A</div>}
+                            {form.tipo === 'Pasivo' ? (
+                                <input type="number" className="w-full p-2 text-xs rounded bg-black" placeholder="Ej. 19" value={form.diaCorte} onChange={e=>setForm({...form, diaCorte: e.target.value})} />
+                            ) : (
+                                <div className="w-full p-2 text-xs rounded bg-black text-zinc-600 font-mono cursor-not-allowed text-center">N/A</div>
+                            )}
                         </div>
                         <div><label className="text-[9px] uppercase text-zinc-500 mb-1 block">Inicial</label><div className="flex gap-2"><input type="number" step="0.01" className="w-full p-2 text-xs rounded bg-black font-mono text-teal-400" placeholder="0.00" value={form.saldoInicial} onChange={e=>setForm({...form, saldoInicial: e.target.value})} /><button onClick={agregarCuenta} className="bg-zinc-800 px-4 rounded text-white font-bold hover:bg-teal-500">+</button></div></div>
                     </div>
@@ -113,7 +116,7 @@
             );
         };
 
-        // === PESTAÑA: TABLERO (CON ORDENAMIENTO EN TABLA) ===
+        // === PESTAÑA: TABLERO (UI DE TABLA OPTIMIZADA) ===
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
@@ -328,13 +331,13 @@
                             <table className="w-full text-left text-[11px] whitespace-nowrap">
                                 <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold select-none">
                                     <tr>
+                                        {/* BUG FIX: Eliminada la columna de Acciones para ahorrar espacio */}
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Fecha_Compra')}>Fecha {sortConfig.key==='Fecha_Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Compra')}>Concepto {sortConfig.key==='Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 text-teal-400 cursor-pointer hover:text-white" onClick={() => requestSort('Categoria')}>Categoría {sortConfig.key==='Categoria'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Cuenta_Origen')}>Cuenta (Flujo) {sortConfig.key==='Cuenta_Origen'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Monto_Total')}>Ticket Total {sortConfig.key==='Monto_Total'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                        <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Aporte')}>Aporte/Parcial {sortConfig.key==='Aporte'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
-                                        <th className="p-3 text-center">Acciones</th>
+                                        <th className="p-3 cursor-pointer hover:text-white text-right" onClick={() => requestSort('Aporte')}>Aporte/Parcial {sortConfig.key==='Aporte'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-900">
@@ -350,24 +353,31 @@
                                         const colorFila = log.Tipo_Operacion === 'Ingreso' ? 'text-teal-400' : (log.Tipo_Operacion === 'Transferencia' ? 'text-indigo-400' : 'text-zinc-200');
 
                                         return (
-                                            <tr key={idx} className="hover:bg-zinc-900/50">
+                                            /* BUG FIX: tabIndex="0" permite que funcione el tap en móviles para revelar los botones */
+                                            <tr key={idx} tabIndex="0" className="hover:bg-zinc-900/50 group focus-within:bg-zinc-900/50">
                                                 <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
-                                                <td className={`p-3 font-bold ${colorFila}`}>{log.Compra} <span className="text-[8px] border border-zinc-700 px-1 rounded ml-1 text-zinc-500 uppercase">{log.Tipo_Operacion}</span></td>
+                                                <td className={`p-3 font-bold ${colorFila}`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{log.Compra}</span>
+                                                        <span className="text-[8px] border border-zinc-700 px-1 rounded text-zinc-500 uppercase">{log.Tipo_Operacion}</span>
+                                                        {/* BUG FIX: Acciones ocultas directamente junto al nombre. Aparen al hacer hover o tocar en celular */}
+                                                        <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2 ml-2">
+                                                            {deletingLog === log.ID_Unico ? (
+                                                                <div className="flex gap-1"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-1">NO</button></div>
+                                                            ) : (
+                                                                <div className="flex gap-2"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400 text-xs">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500 text-xs">🗑️</button></div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
                                                 <td className="p-3 text-zinc-500">{flujoStr}</td>
                                                 <td className="p-3 font-mono text-zinc-500">{formatoMoneda(log.Monto_Total)}</td>
-                                                <td className="p-3 font-mono text-teal-400">{formatoMoneda(aporte)}</td>
-                                                <td className="p-3 text-center">
-                                                    {deletingLog === log.ID_Unico ? (
-                                                        <div className="flex gap-2 justify-center font-bold"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-2">NO</button></div>
-                                                    ) : (
-                                                        <div className="flex gap-3 justify-center items-center"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500">🗑️</button></div>
-                                                    )}
-                                                </td>
+                                                <td className="p-3 font-mono text-teal-400 text-right">{formatoMoneda(aporte)}</td>
                                             </tr>
                                         );
                                     })}
-                                    {sortedLogs.length === 0 && <tr><td colSpan="7" className="p-8 text-center text-zinc-600 font-mono">No se encontraron registros.</td></tr>}
+                                    {sortedLogs.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-zinc-600 font-mono">No se encontraron registros.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -382,10 +392,7 @@
             const [saving, setSaving] = useState(false);
             const [success, setSuccess] = useState(false);
             
-            // Estado para la NUEVA categoría
             const [formNew, setFormNew] = useState({ tipo: 'Gasto', macro: '', nombre: '' });
-            
-            // Estados para EDICIÓN en línea de categorías existentes
             const [editingCat, setEditingCat] = useState(null);
             const [editForm, setEditForm] = useState({ oldName: '', nombre: '', macro: '', tipo: 'Gasto' });
 
@@ -455,7 +462,8 @@
                                                             <div key={c} className="flex flex-col md:flex-row gap-2 items-center bg-zinc-900 p-3 rounded border border-zinc-700">
                                                                 <select className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-teal-400 font-bold" value={editForm.tipo} onChange={e=>setEditForm({...editForm, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
                                                                 <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white" placeholder="Macro" value={editForm.macro} onChange={e=>setEditForm({...editForm, macro: e.target.value})} />
-                                                                <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white font-bold" placeholder="Nombre" value={editForm.nombre} onChange={e=>setForm({...editForm, nombre: e.target.value})} />
+                                                                {/* BUG FIX TYPO: Se cambió setForm por setEditForm */}
+                                                                <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white font-bold" placeholder="Nombre" value={editForm.nombre} onChange={e=>setEditForm({...editForm, nombre: e.target.value})} />
                                                                 <div className="flex gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
                                                                     <button onClick={saveEdit} disabled={saving} className="bg-teal-500 text-black px-4 py-2 rounded text-xs font-bold hover:bg-white">{saving ? '...' : '✓'}</button>
                                                                     <button onClick={()=>setEditingCat(null)} className="bg-zinc-800 text-zinc-400 px-3 py-2 rounded text-xs hover:text-white">✕</button>
@@ -464,12 +472,12 @@
                                                         );
                                                     }
 
-                                                    // MODO LECTURA NORMAL
+                                                    // MODO LECTURA NORMAL (Bug de íconos intrusivos resuelto en móvil)
                                                     return (
-                                                        <div key={c} className="flex flex-col md:flex-row justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50 group transition-all">
+                                                        <div key={c} tabIndex="0" className="flex flex-col md:flex-row justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50 group focus-within:bg-zinc-900/50 transition-all">
                                                             <div className="flex items-center gap-3 w-full md:w-auto mb-2 md:mb-0">
                                                                 <span className="text-[11px] uppercase text-zinc-300 font-medium pl-2 border-l-2 border-zinc-700">{c}</span>
-                                                                <div className="md:opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                                                <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2">
                                                                     <button onClick={()=>startEdit(c, macro, tipo)} className="text-zinc-500 hover:text-teal-400 text-xs">✏️</button>
                                                                     <button onClick={()=>confirmDeleteCategory(c)} className="text-zinc-500 hover:text-rose-500 text-xs">🗑️</button>
                                                                 </div>
