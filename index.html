@@ -6,14 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#050505">
     <link rel="manifest" href="manifest.json">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUyJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyMjAiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IiMyZGQ0YmYiPkZMPC90ZXh0Pjwvc3ZnPg==">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUyJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIyMjAiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IiMyZGQ0YmYiPkZMPC90ZXh0Pjwvc3ZnPg==">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500;800&display=swap" rel="stylesheet">
     <style>
-        body { background: #050505; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; }
-        .glass-card { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 8px; }
+        body { background: #050505; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; transition: background-color 0.3s ease, color 0.3s ease; }
+        .glass-card { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 8px; transition: background-color 0.3s ease; }
         .accent-glow { color: #2dd4bf; text-shadow: 0 0 8px rgba(45, 212, 191, 0.3); }
         input, select { background: #111 !important; border: 1px solid #222 !important; color: white !important; }
         input:focus, select:focus { border-color: #2dd4bf !important; outline: none; }
@@ -22,6 +26,18 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .progress-bar { height: 6px; border-radius: 3px; background: #1f1f1f; overflow: hidden; }
         .progress-fill { height: 100%; transition: width 0.5s ease; }
+        
+        /* MOTOR MODO CLARO SEGURO (Anula colores oscuros sin romper Tailwind) */
+        body.light-mode { background: #f8fafc; color: #0f172a; }
+        body.light-mode .glass-card { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        body.light-mode .bg-zinc-900, body.light-mode .bg-black, body.light-mode .bg-zinc-800 { background-color: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #0f172a !important; }
+        body.light-mode .bg-zinc-900\/50 { background-color: #f8fafc !important; }
+        body.light-mode .text-zinc-500, body.light-mode .text-zinc-400, body.light-mode .text-zinc-600 { color: #64748b !important; }
+        body.light-mode .text-zinc-300, body.light-mode .text-zinc-200, body.light-mode .text-white { color: #0f172a !important; }
+        body.light-mode .border-zinc-800, body.light-mode .border-zinc-700 { border-color: #e2e8f0 !important; }
+        body.light-mode input, body.light-mode select { background: #ffffff !important; border: 1px solid #cbd5e1 !important; color: #0f172a !important; }
+        body.light-mode .divide-zinc-900 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0 !important; }
+        body.light-mode .hover\:bg-zinc-900\/50:hover, body.light-mode .focus-within\:bg-zinc-900\/50:focus-within { background-color: #e2e8f0 !important; }
     </style>
 </head>
 <body>
@@ -44,6 +60,12 @@
         const COLORES_PASTEL = ['#2dd4bf', '#0ea5e9', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#14b8a6', '#6366f1'];
         const getHoyStr = () => { const hoy = new Date(); const offset = hoy.getTimezoneOffset() * 60000; return (new Date(hoy - offset)).toISOString().split('T')[0]; };
         const formatoMoneda = (num) => Number(num || 0).toLocaleString('es-MX', {style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        // === ICONOS SVG PROFESIONALES ===
+        const IconEdit = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>;
+        const IconDelete = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>;
+        const IconSun = () => <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>;
+        const IconMoon = () => <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>;
 
         // === PESTAÑA: GESTOR DE CUENTAS ===
         const CuentasManager = ({ cuentas, logs, loadData }) => {
@@ -90,8 +112,8 @@
                                 if (l.Tipo_Operacion === 'Transferencia' && l.Cuenta_Destino === c.nombre) balance += m;
                             });
                             return (
-                                <div key={i} className="bg-zinc-900/50 p-4 rounded border border-zinc-800 space-y-3 relative">
-                                    <button onClick={()=>eliminarCuenta(c.nombre)} className="absolute top-2 right-2 text-zinc-600 hover:text-rose-500 text-xs">×</button>
+                                <div key={i} className="bg-zinc-900/50 p-4 rounded border border-zinc-800 space-y-3 relative group">
+                                    <button onClick={()=>eliminarCuenta(c.nombre)} className="absolute top-2 right-2 text-zinc-600 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"><IconDelete /></button>
                                     <div className="flex justify-between pr-4">
                                         <input className="bg-transparent font-bold text-teal-400 outline-none w-1/2" value={c.nombre} onChange={e=>handleEdit(i, 'nombre', e.target.value)} />
                                         <div className="flex flex-col items-end">
@@ -106,7 +128,7 @@
                                     </div>
                                     <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
                                         <span className={`text-[8px] uppercase px-2 py-1 rounded ${c.tipo.trim()==='Pasivo'?'bg-rose-500/20 text-rose-400':'bg-teal-500/20 text-teal-400'}`}>{c.tipo}</span>
-                                        <p className={`font-mono font-bold text-lg ${c.tipo.trim()==='Pasivo'?'text-rose-400':'text-white'}`}>{formatoMoneda(c.tipo.trim()==='Pasivo' ? balance * -1 : balance)}</p>
+                                        <p className={`font-mono font-bold text-lg ${c.tipo.trim()==='Pasivo'?'text-rose-400':'text-zinc-800'}`}>{formatoMoneda(c.tipo.trim()==='Pasivo' ? balance * -1 : balance)}</p>
                                     </div>
                                 </div>
                             );
@@ -116,7 +138,7 @@
             );
         };
 
-        // === PESTAÑA: TABLERO (UI DE TABLA OPTIMIZADA) ===
+        // === PESTAÑA: TABLERO ===
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
@@ -133,7 +155,6 @@
             useEffect(() => { setHiddenTipos([]); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
-            
             const logsGrafico = useMemo(() => logsGlobal.filter(l => {
                 if (l.Tipo_Operacion === 'Transferencia' || l.Tipo_Operacion === 'Ingreso') return false; 
                 if (viewScope === 'Compartido') return !l.Tipo_Gasto.includes('Personal');
@@ -281,7 +302,7 @@
                         </div>
                         <div className={`glass-card p-6 border-l-4 ${deudaAbi === 0 ? 'border-teal-500' : (deudaAbi > 0 ? 'border-rose-500' : 'border-amber-500')}`}>
                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Estado Global (Hogar)</p>
-                            <p className={`text-2xl font-bold mt-1 ${deudaAbi === 0 ? 'text-teal-400' : 'text-white'}`}>{deudaAbi === 0 ? 'Saldado ✓' : (deudaAbi > 0 ? `Abi debe ${formatoMoneda(deudaAbi)}` : `Josué debe ${formatoMoneda(Math.abs(deudaAbi))}`)}</p>
+                            <p className={`text-2xl font-bold mt-1 ${deudaAbi === 0 ? 'text-teal-400' : 'text-zinc-800'}`}>{deudaAbi === 0 ? 'Saldado ✓' : (deudaAbi > 0 ? `Abi debe ${formatoMoneda(deudaAbi)}` : `Josué debe ${formatoMoneda(Math.abs(deudaAbi))}`)}</p>
                         </div>
                     </div>
 
@@ -298,7 +319,7 @@
                                     return (
                                         <li key={cat} className="text-xs">
                                             <div className="flex justify-between items-center mb-1">
-                                                <div className="flex items-center gap-3"><span className="w-4 h-4 rounded-full" style={{backgroundColor: gastado > 0 ? COLORES_PASTEL[i % COLORES_PASTEL.length] : '#333'}}></span><span className="text-zinc-300 font-medium">{cat}</span></div>
+                                                <div className="flex items-center gap-3"><span className="w-4 h-4 rounded-full" style={{backgroundColor: gastado > 0 ? COLORES_PASTEL[i % COLORES_PASTEL.length] : '#333'}}></span><span className="text-zinc-400 font-medium">{cat}</span></div>
                                                 <div className="text-right"><span className={`font-mono ${meta > 0 && pct > 100 ? 'text-rose-500' : 'text-teal-400'}`}>{formatoMoneda(gastado)}</span>{meta > 0 && <span className="text-[9px] text-zinc-500"> / {formatoMoneda(meta)}</span>}</div>
                                             </div>
                                             {meta > 0 && (
@@ -331,7 +352,6 @@
                             <table className="w-full text-left text-[11px] whitespace-nowrap">
                                 <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold select-none">
                                     <tr>
-                                        {/* BUG FIX: Eliminada la columna de Acciones para ahorrar espacio */}
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Fecha_Compra')}>Fecha {sortConfig.key==='Fecha_Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 cursor-pointer hover:text-white" onClick={() => requestSort('Compra')}>Concepto {sortConfig.key==='Compra'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
                                         <th className="p-3 text-teal-400 cursor-pointer hover:text-white" onClick={() => requestSort('Categoria')}>Categoría {sortConfig.key==='Categoria'?(sortConfig.direction==='asc'?'▲':'▼'):''}</th>
@@ -343,29 +363,23 @@
                                 <tbody className="divide-y divide-zinc-900">
                                     {sortedLogs.map((log, idx) => {
                                         let aporte = Number(log.Monto_Parcial) || 0;
-                                        if (log.Tipo_Operacion === 'Gasto') {
-                                            aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi));
-                                        }
-
+                                        if (log.Tipo_Operacion === 'Gasto') { aporte = viewScope === 'Compartido' ? Number(log.Monto_Parcial) : (viewScope === 'Josue' ? Number(log.Participacion_Josue) : Number(log.Participacion_Abi)); }
                                         let flujoStr = log.Cuenta_Origen;
                                         if (log.Tipo_Operacion === 'Transferencia') flujoStr += ` ➔ ${log.Cuenta_Destino}`;
-
                                         const colorFila = log.Tipo_Operacion === 'Ingreso' ? 'text-teal-400' : (log.Tipo_Operacion === 'Transferencia' ? 'text-indigo-400' : 'text-zinc-200');
 
                                         return (
-                                            /* BUG FIX: tabIndex="0" permite que funcione el tap en móviles para revelar los botones */
                                             <tr key={idx} tabIndex="0" className="hover:bg-zinc-900/50 group focus-within:bg-zinc-900/50">
                                                 <td className="p-3 text-zinc-500 font-mono">{log.Fecha_Compra}</td>
                                                 <td className={`p-3 font-bold ${colorFila}`}>
                                                     <div className="flex items-center gap-2">
                                                         <span>{log.Compra}</span>
                                                         <span className="text-[8px] border border-zinc-700 px-1 rounded text-zinc-500 uppercase">{log.Tipo_Operacion}</span>
-                                                        {/* BUG FIX: Acciones ocultas directamente junto al nombre. Aparen al hacer hover o tocar en celular */}
                                                         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2 ml-2">
                                                             {deletingLog === log.ID_Unico ? (
                                                                 <div className="flex gap-1"><button onClick={() => { setDeletingLog(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>document.getElementById('refreshBtn').click()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded">SÍ</button><button onClick={() => setDeletingLog(null)} className="text-zinc-500 px-1">NO</button></div>
                                                             ) : (
-                                                                <div className="flex gap-2"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400 text-xs">✏️</button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500 text-xs">🗑️</button></div>
+                                                                <div className="flex gap-2"><button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400"><IconEdit /></button><button onClick={() => setDeletingLog(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500"><IconDelete /></button></div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -386,7 +400,7 @@
             );
         };
 
-        // === PESTAÑA: PLAN (REDISEÑO CON EDICIÓN EN LÍNEA) ===
+        // === PESTAÑA: PLAN ===
         const BudgetEditor = ({ appData, setAppData, loadData }) => {
             const [planScope, setPlanScope] = useState('Compartido');
             const [saving, setSaving] = useState(false);
@@ -397,34 +411,11 @@
             const [editForm, setEditForm] = useState({ oldName: '', nombre: '', macro: '', tipo: 'Gasto' });
 
             const handleSave = () => { if(!navigator.onLine) return alert("Necesitas conexión."); setSaving(true); apiCall('guardarPresupuestoGlobal', appData).then(() => { setSaving(false); setSuccess(true); setTimeout(() => setSuccess(false), 2500); }); };
+            const addCat = () => { const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General'; if(!navigator.onLine) return alert("Necesitas conexión."); if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) { apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData()); setFormNew({ ...formNew, nombre: '', macro: '' }); } };
             
-            const addCat = () => { 
-                const name = formNew.nombre.trim(); const macro = formNew.macro.trim() || 'General'; 
-                if(!navigator.onLine) return alert("Necesitas conexión."); 
-                if(name !== '' && !Object.values(appData.arbolCat).some(t => Object.values(t).some(m => m.includes(name)))) { 
-                    apiCall('agregarCategoriaMaster', {name, macro, tipo: formNew.tipo}).then(()=>loadData()); 
-                    setFormNew({ ...formNew, nombre: '', macro: '' }); 
-                } 
-            };
-
-            const startEdit = (cat, macro, tipo) => {
-                setEditingCat(cat);
-                setEditForm({ oldName: cat, nombre: cat, macro: macro, tipo: tipo });
-            };
-
-            const saveEdit = () => {
-                if(!navigator.onLine) return alert("Necesitas conexión.");
-                if(!editForm.nombre.trim()) return;
-                setSaving(true);
-                apiCall('editarCategoriaMaster', {
-                    oldName: editForm.oldName, newName: editForm.nombre.trim(), 
-                    newMacro: editForm.macro.trim() || 'General', newTipo: editForm.tipo
-                }).then(() => {
-                    setEditingCat(null); loadData(); setSaving(false);
-                });
-            };
-
-            const confirmDeleteCategory = (cat) => { if(window.confirm(`¿Eliminar permanentemente la categoría "${cat}"?`)) { apiCall('eliminarCategoriaMaster', cat).then(() => loadData()); } };
+            const startEdit = (cat, macro, tipo) => { setEditingCat(cat); setEditForm({ oldName: cat, nombre: cat, macro: macro, tipo: tipo }); };
+            const saveEdit = () => { if(!navigator.onLine) return alert("Necesitas conexión."); if(!editForm.nombre.trim()) return; setSaving(true); apiCall('editarCategoriaMaster', { oldName: editForm.oldName, newName: editForm.nombre.trim(), newMacro: editForm.macro.trim() || 'General', newTipo: editForm.tipo }).then(() => { setEditingCat(null); loadData(); setSaving(false); }); };
+            const confirmDeleteCategory = (cat) => { if(window.confirm(`¿Eliminar permanentemente "${cat}"?`)) { apiCall('eliminarCategoriaMaster', cat).then(() => loadData()); } };
             
             const total = Object.values(appData.presupuesto[planScope] || {}).reduce((a, b) => a + b, 0);
 
@@ -450,19 +441,17 @@
                             if(macros.length === 0) return null;
                             return (
                                 <div key={tipo}>
-                                    <h2 className="text-lg font-black text-white uppercase tracking-widest mb-4 border-b-2 border-zinc-700 pb-2">{tipo}S</h2>
+                                    <h2 className="text-lg font-black text-zinc-300 uppercase tracking-widest mb-4 border-b-2 border-zinc-700 pb-2">{tipo}S</h2>
                                     {macros.map(macro => (
                                         <div key={macro} className="mb-6 ml-2">
                                             <h3 className="text-[10px] text-teal-500 font-bold uppercase tracking-widest mb-2">{macro}</h3>
                                             <div className="space-y-2">
                                                 {appData.arbolCat[tipo][macro].map(c => {
-                                                    // MODO EDICIÓN EN LÍNEA
                                                     if (editingCat === c) {
                                                         return (
                                                             <div key={c} className="flex flex-col md:flex-row gap-2 items-center bg-zinc-900 p-3 rounded border border-zinc-700">
                                                                 <select className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-teal-400 font-bold" value={editForm.tipo} onChange={e=>setEditForm({...editForm, tipo: e.target.value})}><option>Gasto</option><option>Ingreso</option></select>
                                                                 <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white" placeholder="Macro" value={editForm.macro} onChange={e=>setEditForm({...editForm, macro: e.target.value})} />
-                                                                {/* BUG FIX TYPO: Se cambió setForm por setEditForm */}
                                                                 <input className="w-full md:w-auto p-2 text-xs rounded bg-black outline-none text-white font-bold" placeholder="Nombre" value={editForm.nombre} onChange={e=>setEditForm({...editForm, nombre: e.target.value})} />
                                                                 <div className="flex gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
                                                                     <button onClick={saveEdit} disabled={saving} className="bg-teal-500 text-black px-4 py-2 rounded text-xs font-bold hover:bg-white">{saving ? '...' : '✓'}</button>
@@ -471,15 +460,13 @@
                                                             </div>
                                                         );
                                                     }
-
-                                                    // MODO LECTURA NORMAL (Bug de íconos intrusivos resuelto en móvil)
                                                     return (
                                                         <div key={c} tabIndex="0" className="flex flex-col md:flex-row justify-between items-center bg-zinc-900/30 p-3 rounded border border-zinc-800/50 group focus-within:bg-zinc-900/50 transition-all">
                                                             <div className="flex items-center gap-3 w-full md:w-auto mb-2 md:mb-0">
                                                                 <span className="text-[11px] uppercase text-zinc-300 font-medium pl-2 border-l-2 border-zinc-700">{c}</span>
                                                                 <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2">
-                                                                    <button onClick={()=>startEdit(c, macro, tipo)} className="text-zinc-500 hover:text-teal-400 text-xs">✏️</button>
-                                                                    <button onClick={()=>confirmDeleteCategory(c)} className="text-zinc-500 hover:text-rose-500 text-xs">🗑️</button>
+                                                                    <button onClick={()=>startEdit(c, macro, tipo)} className="text-zinc-500 hover:text-teal-400"><IconEdit /></button>
+                                                                    <button onClick={()=>confirmDeleteCategory(c)} className="text-zinc-500 hover:text-rose-500"><IconDelete /></button>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -497,7 +484,6 @@
                         })}
                     </div>
 
-                    {/* BARRA DE CREACIÓN LIMPIA */}
                     <div className="border-t border-zinc-800 pt-8">
                         <h3 className="text-xs font-bold uppercase text-zinc-500 tracking-widest mb-4">Crear Nueva Categoría</h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-zinc-900 p-2 rounded border border-zinc-800">
@@ -511,13 +497,21 @@
             );
         };
 
-        // === PESTAÑA: REGISTRO ===
+        // === APP PRINCIPAL ===
         const App = () => {
             const [view, setView] = useState('registro'); 
             const [loadingInitial, setLoadingInitial] = useState(true);
             const [savingGasto, setSavingGasto] = useState(false);
             const [showSuccess, setShowSuccess] = useState(false);
             const [showOffline, setShowOffline] = useState(false);
+            
+            // MOTOR DE MODO LUZ
+            const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('fl_theme') === 'light');
+            useEffect(() => {
+                if (isLightMode) document.body.classList.add('light-mode');
+                else document.body.classList.remove('light-mode');
+                localStorage.setItem('fl_theme', isLightMode ? 'light' : 'dark');
+            }, [isLightMode]);
             
             const [appData, setAppData] = useState({ rawLogs: [], presupuesto: { Compartido: {}, Josue: {}, Abi: {} }, arbolCat: { Gasto: {}, Ingreso: {} }, cuentas: [] });
             const [configProporcion, setConfigProporcion] = useState({ josue: '53', abi: '47' }); 
@@ -533,11 +527,7 @@
                 if (pending.length === 0) loadData(); 
             };
 
-            useEffect(() => {
-                window.addEventListener('online', syncOfflineQueue);
-                return () => window.removeEventListener('online', syncOfflineQueue);
-            }, []);
-
+            useEffect(() => { window.addEventListener('online', syncOfflineQueue); return () => window.removeEventListener('online', syncOfflineQueue); }, []);
             useEffect(() => { loadData(); }, []);
 
             const loadData = () => {
@@ -601,9 +591,14 @@
                 <div className="max-w-5xl mx-auto p-4 md:p-6 pb-20">
                     <button id="refreshBtn" className="hidden" onClick={loadData}></button>
                     <header className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-zinc-900 pb-6 gap-4">
-                        <div>
-                            <h1 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">Finance<span className="text-teal-500">Lab</span> {!navigator.onLine && <span className="text-[9px] bg-amber-500 text-black px-2 py-1 rounded font-bold">OFFLINE</span>}</h1>
-                            <p className="text-[9px] text-zinc-500 tracking-[0.3em]">HOGAR JOSUÉ & ABIGAIL</p>
+                        <div className="flex justify-between w-full md:w-auto items-center">
+                            <div>
+                                <h1 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">Finance<span className="text-teal-500">Lab</span> {!navigator.onLine && <span className="text-[9px] bg-amber-500 text-black px-2 py-1 rounded font-bold">OFFLINE</span>}</h1>
+                                <p className="text-[9px] text-zinc-500 tracking-[0.3em]">HOGAR JOSUÉ & ABIGAIL</p>
+                            </div>
+                            <button onClick={() => setIsLightMode(!isLightMode)} className="md:ml-4 p-2 rounded bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-colors">
+                                {isLightMode ? <IconMoon /> : <IconSun />}
+                            </button>
                         </div>
                         <nav className="flex gap-2 bg-zinc-900/50 p-1 rounded border border-zinc-800">
                             {['registro', 'cuentas', 'dash', 'plan'].map(v => (
@@ -648,7 +643,7 @@
                                                 Monto Total
                                                 <span className="text-teal-400 font-mono text-xs">{form.monto ? formatoMoneda(form.monto) : ''}</span>
                                             </label>
-                                            <input type="number" step="0.01" className="w-full p-3 rounded font-mono text-lg text-white outline-none" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} />
+                                            <input type="number" step="0.01" className="w-full p-3 rounded font-mono text-lg text-zinc-200 outline-none" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} />
                                         </div>
                                         <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Registrador</label><select className="w-full p-3 rounded text-xs outline-none" value={form.registrador} onChange={e => setForm({...form, registrador: e.target.value})}><option>Josué</option><option>Abigail</option></select></div>
                                     </div>
