@@ -68,7 +68,7 @@
             const [viewScope, setViewScope] = useState('Compartido');
             const [busqueda, setBusqueda] = useState('');
             const [lanzandoId, setLanzandoId] = useState(null);
-            const [deletingRecId, setDeletingRecId] = useState(null); // FIX: Confirmacion In-App sin Popups
+            const [deletingRecId, setDeletingRecId] = useState(null); 
             const [fechaLanzamiento, setFechaLanzamiento] = useState(getHoyStr());
 
             const getEstado = (fechaStr) => {
@@ -88,7 +88,6 @@
             const filteredLogs = useMemo(() => {
                 let mapeados = logs.filter(l => {
                     if (l.Tipo_Operacion === 'Transferencia') {
-                        // FIX: Lógica inteligente para ocultar transferencias ajenas en recordatorios
                         if (viewScope === 'Compartido') return false; 
                         if (viewScope === 'Josue' && l.Registrador !== 'Josué') return false;
                         if (viewScope === 'Abi' && l.Registrador !== 'Abigail') return false; 
@@ -139,21 +138,17 @@
                                                         <span className="text-[8px] border border-zinc-700 px-1 rounded text-zinc-500 uppercase">{log.Tipo_Operacion}</span>
                                                         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2 ml-2">
                                                             <button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400"><IconEdit /></button>
-                                                            
-                                                            {/* FIX: Eliminación sin Popups */}
                                                             {deletingRecId === log.ID_Unico ? (
                                                                 <div className="flex gap-1"><button onClick={() => { setDeletingRecId(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>loadData()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded font-bold text-[9px]">SÍ</button><button onClick={() => setDeletingRecId(null)} className="text-zinc-500 px-1 text-[9px]">NO</button></div>
                                                             ) : (
                                                                 <button onClick={() => setDeletingRecId(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500"><IconDelete /></button>
                                                             )}
-                                                            
                                                             <button onClick={() => { setLanzandoId(log.ID_Unico); setFechaLanzamiento(getHoyStr()); }} className="text-indigo-400 hover:text-white bg-indigo-500/20 px-2 py-1 rounded flex gap-1 items-center font-bold"><IconLaunch /> Ejecutar</button>
                                                         </div>
                                                     </div>
-                                                    
                                                     {lanzandoId === log.ID_Unico && (
                                                         <div className="mt-2 p-2 bg-black rounded border border-indigo-500/50 flex gap-2 items-center fade-in max-w-sm">
-                                                            <span className="text-[9px] text-indigo-300 uppercase font-bold">Lanzar con fecha:</span>
+                                                            <span className="text-[9px] text-indigo-300 uppercase font-bold">Lanzar fecha:</span>
                                                             <input type="date" className="p-1 rounded text-xs bg-zinc-900 text-white outline-none" value={fechaLanzamiento} onChange={e=>setFechaLanzamiento(e.target.value)} />
                                                             <button onClick={()=>ejecutando(log.ID_Unico)} className="bg-indigo-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-indigo-400">Confirmar</button>
                                                             <button onClick={()=>setLanzandoId(null)} className="text-zinc-500 hover:text-white text-xs px-2">✕</button>
@@ -166,7 +161,7 @@
                                             </tr>
                                         );
                                     })}
-                                    {filteredLogs.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-zinc-600 font-mono">No hay recordatorios pendientes.</td></tr>}
+                                    {filteredLogs.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-zinc-600 font-mono">No hay recordatorios.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -180,7 +175,7 @@
             const [localCuentas, setLocalCuentas] = useState(cuentas);
             const [saving, setSaving] = useState(false);
             const [form, setForm] = useState({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' });
-            const [deletingCuenta, setDeletingCuenta] = useState(null); // FIX: Estado para confirmacion In-App
+            const [deletingCuenta, setDeletingCuenta] = useState(null);
 
             const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = val; setLocalCuentas(updated); };
             const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim() }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' }); };
@@ -222,7 +217,6 @@
                             });
                             return (
                                 <div key={i} tabIndex="0" className="bg-zinc-900/50 p-4 rounded border border-zinc-800 space-y-3 relative group focus-within:bg-zinc-900/80 transition-colors">
-                                    {/* FIX: Eliminación In-App en cuentas */}
                                     {deletingCuenta === c.nombre ? (
                                         <div className="absolute top-2 right-2 flex gap-1 z-10 bg-black p-1 rounded border border-rose-500/50">
                                             <button onClick={()=>eliminarCuenta(c.nombre)} className="text-rose-500 text-[9px] font-bold px-2 hover:bg-rose-500/20 rounded">Eliminar</button>
@@ -256,12 +250,15 @@
             );
         };
 
-        // === PESTAÑA: TABLERO ===
+        // === PESTAÑA: TABLERO (CROSS-FILTERING) ===
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
             const [tablaFiltroTipo, setTablaFiltroTipo] = useState('Gasto');
             const [busqueda, setBusqueda] = useState('');
+            
+            // NUEVO ESTADO: Filtro Cruzado por Categoría
+            const [filtroCategoriaTabla, setFiltroCategoriaTabla] = useState(null);
 
             const mapCuentas = useMemo(() => { let map = {}; cuentas.forEach(c => map[c.nombre] = c.propietario); return map; }, [cuentas]);
             const periodos = useMemo(() => [...new Set(rawLogs.map(l => l.Periodo_Pago))].filter(Boolean).sort((a, b) => { try { const pA = String(a).split('/'); const pB = String(b).split('/'); return new Date(pB[2], pB[1]-1, pB[0]) - new Date(pA[2], pA[1]-1, pA[0]); } catch(e) { return 0; } }), [rawLogs]);
@@ -269,7 +266,9 @@
             const [periodoActivo, setPeriodoActivo] = useState(periodos.includes(getPeriodoActual()) ? getPeriodoActual() : (periodos[0] || getPeriodoActual()));
             
             const [hiddenTipos, setHiddenTipos] = useState([]);
-            useEffect(() => { setHiddenTipos([]); }, [viewScope, periodoActivo]);
+            
+            // Si cambias de vista o de periodo, se borra el filtro de categoría para no confundir
+            useEffect(() => { setHiddenTipos([]); setFiltroCategoriaTabla(null); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
             const logsGrafico = useMemo(() => logsGlobal.filter(l => {
@@ -291,6 +290,9 @@
                         if (viewScope === 'Josue' && !(Number(l.Participacion_Josue) > 0)) return false;
                         if (viewScope === 'Abi' && !(Number(l.Participacion_Abi) > 0)) return false;
                     }
+                    // APLICACIÓN DEL FILTRO CRUZADO
+                    if (filtroCategoriaTabla && l.Categoria !== filtroCategoriaTabla) return false;
+                    
                     return true;
                 });
 
@@ -304,7 +306,7 @@
                     );
                 }
                 return mapeados;
-            }, [logsGlobal, tablaFiltroTipo, viewScope, busqueda]);
+            }, [logsGlobal, tablaFiltroTipo, viewScope, busqueda, filtroCategoriaTabla]);
 
             const deudaAbi = logsGlobal.reduce((acc, curr) => {
                 const monto = Number(curr.Monto_Parcial) || 0;
@@ -322,7 +324,6 @@
                 return acc;
             }, 0);
 
-            // FIX: Lógica Dinámica Invasiva de Privacidad (Oculta Tarjeta de Deuda si no le incumbe al ViewScope)
             const showDeuda = (viewScope === 'Compartido' && deudaAbi === 0) || (viewScope === 'Josue' && deudaAbi < 0) || (viewScope === 'Abi' && deudaAbi > 0);
 
             const totalGastoView = logsGraficoFiltrado.reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
@@ -427,12 +428,20 @@
                             <div className="pie-chart w-48 h-48 md:w-56 md:h-56 mb-6 transition-all" style={{ background: construirConicGradient() }}></div>
                         </div>
                         <div className="glass-card p-6 overflow-y-auto max-h-80">
-                            <ul className="space-y-5">
+                            <ul className="space-y-3">
                                 {categoriasParaRender.map((catObj, i) => {
                                     const cat = catObj.nombre; const gastado = catObj.total; const meta = currentPresupuesto[cat] || 0;
                                     if (gastado === 0 && meta === 0) return null; const pct = meta > 0 ? (gastado / meta) * 100 : 0;
                                     return (
-                                        <li key={cat} className="text-xs">
+                                        <li key={cat} 
+                                            // LA MAGIA DEL FILTRO CRUZADO: Clic hace filtro
+                                            onClick={() => {
+                                                setFiltroCategoriaTabla(cat);
+                                                // Si el filtro maestro estaba en Transferencias/Ingresos, lo forzamos a Gastos para que la tabla no quede vacía
+                                                if (tablaFiltroTipo !== 'Gasto' && tablaFiltroTipo !== 'Todos') setTablaFiltroTipo('Gasto');
+                                            }}
+                                            className="text-xs cursor-pointer hover:bg-zinc-900/50 p-2 -mx-2 rounded transition-colors"
+                                        >
                                             <div className="flex justify-between items-center mb-1">
                                                 <div className="flex items-center gap-3"><span className="w-4 h-4 rounded-full" style={{backgroundColor: gastado > 0 ? COLORES_PASTEL[i % COLORES_PASTEL.length] : '#333'}}></span><span className="text-zinc-400 font-medium">{cat}</span></div>
                                                 <div className="text-right"><span className={`font-mono ${meta > 0 && pct > 100 ? 'text-rose-500' : 'text-teal-400'}`}>{formatoMoneda(gastado)}</span>{meta > 0 && <span className="text-[9px] text-zinc-500"> / {formatoMoneda(meta)}</span>}</div>
@@ -457,6 +466,13 @@
                                     <option value="Transferencia">Solo Transferencias</option>
                                     <option value="Todos">Ver Todos</option>
                                 </select>
+                                
+                                {/* LA PÍLDORA DEL FILTRO CRUZADO */}
+                                {filtroCategoriaTabla && (
+                                    <button onClick={() => setFiltroCategoriaTabla(null)} className="flex items-center gap-1 bg-teal-500/20 text-teal-500 px-2 py-1.5 rounded text-[10px] font-bold border border-teal-500/30 hover:bg-rose-500/20 hover:text-rose-500 hover:border-rose-500/30 transition-colors">
+                                        <span>{filtroCategoriaTabla}</span><span>✕</span>
+                                    </button>
+                                )}
                             </div>
                             <div className="w-full md:w-72">
                                 <input className="w-full p-2 text-xs rounded bg-black border border-zinc-800 outline-none text-zinc-300" placeholder="🔍 Buscar (#tags, concepto, monto...)" value={busqueda} onChange={e=>setBusqueda(e.target.value)} />
@@ -528,7 +544,7 @@
             const [formNew, setFormNew] = useState({ tipo: 'Gasto', macro: '', nombre: '' });
             const [editingCat, setEditingCat] = useState(null);
             const [editForm, setEditForm] = useState({ oldName: '', nombre: '', macro: '', tipo: 'Gasto' });
-            const [deletingCat, setDeletingCat] = useState(null); // FIX: Confirmación In-App sin Popups
+            const [deletingCat, setDeletingCat] = useState(null);
 
             const handleSave = () => { if(!navigator.onLine) return alert("Necesitas conexión."); setSaving(true); apiCall('guardarPresupuestoGlobal', appData).then(() => { setSaving(false); setSuccess(true); setTimeout(() => setSuccess(false), 2500); }); };
             
@@ -645,8 +661,6 @@
             const [savingGasto, setSavingGasto] = useState(false);
             const [showSuccess, setShowSuccess] = useState(false);
             const [showOffline, setShowOffline] = useState(false);
-            
-            // FIX: Form Error In-App
             const [formError, setFormError] = useState('');
             
             const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('fl_theme') === 'light');
@@ -713,7 +727,6 @@
             };
 
             const saveGasto = () => {
-                // FIX: Validaciones sin popups
                 if(!form.monto) { setFormError("⚠️ Falta ingresar el monto total."); setTimeout(()=>setFormError(""),3000); return; }
                 if(!form.compra) { setFormError("⚠️ Falta ingresar la descripción."); setTimeout(()=>setFormError(""),3000); return; }
 
@@ -751,7 +764,6 @@
                             </button>
                         </div>
                         <nav className="flex gap-2 bg-zinc-900/50 p-1 rounded border border-zinc-800 overflow-x-auto">
-                            {/* FIX: Tab Memo restaurado y limpo */}
                             {['registro', 'recordatorios', 'cuentas', 'dash', 'plan'].map(v => (
                                 <button key={v} onClick={() => { if(v!=='registro') loadData(); setView(v); setForm(prev => ({...prev, id_edit: null})); }} className={`px-4 py-2 text-[10px] font-bold uppercase rounded transition-colors whitespace-nowrap ${view === v ? 'bg-[#2dd4bf] text-black' : 'text-zinc-500 hover:text-white'}`}>
                                     {v==='dash'?'Tablero':(v==='recordatorios'?'Memo':v)}
@@ -794,7 +806,7 @@
                                                 Monto Total
                                                 <span className="text-teal-400 font-mono text-xs">{form.monto ? formatoMoneda(form.monto) : ''}</span>
                                             </label>
-                                            <input type="number" step="0.01" className="w-full p-3 rounded font-mono text-lg text-zinc-200 outline-none" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} />
+                                            <input type="number" step="0.01" className="w-full p-3 rounded font-mono text-lg text-white outline-none" placeholder="0.00" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} />
                                         </div>
                                         <div><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold">Registrador</label><select className="w-full p-3 rounded text-xs outline-none" value={form.registrador} onChange={e => setForm({...form, registrador: e.target.value})}><option>Josué</option><option>Abigail</option></select></div>
                                     </div>
@@ -821,7 +833,6 @@
                                         <div className="border-t border-zinc-800 pt-5 fade-in"><label className="text-[10px] text-zinc-500 uppercase block mb-1 font-bold flex justify-between"><span>Meses sin intereses (Opcional)</span></label><input type="number" min="1" max="24" className="w-full p-3 rounded font-mono max-w-[150px] outline-none" value={form.msi} onChange={e => setForm({...form, msi: e.target.value})} /></div>
                                     )}
 
-                                    {/* FIX: Texto limpio */}
                                     <div className="bg-indigo-900/20 border border-indigo-500/30 p-4 rounded mt-4 flex items-center gap-3 cursor-pointer" onClick={() => setForm({...form, esRecordatorio: !form.esRecordatorio})}>
                                         <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${form.esRecordatorio ? 'bg-indigo-500 border-indigo-400' : 'bg-black border-zinc-600'}`}>
                                             {form.esRecordatorio && <span className="text-white text-xs font-bold">✓</span>}
@@ -832,7 +843,6 @@
                                         </div>
                                     </div>
 
-                                    {/* FIX: Notificación de error en lugar de alert() */}
                                     {formError && <div className="bg-rose-500/20 text-rose-400 border border-rose-500 p-3 rounded text-xs font-bold text-center mt-4 fade-in">{formError}</div>}
 
                                     <button disabled={savingGasto || showSuccess || showOffline} onClick={saveGasto} className={`w-full font-black p-4 rounded mt-4 uppercase tracking-[0.2em] text-xs transition-all outline-none ${form.esRecordatorio ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-[#2dd4bf] text-black shadow-[0_0_15px_rgba(45,212,191,0.2)] hover:bg-white'} ${showOffline ? 'bg-amber-500 text-black shadow-none' : (showSuccess ? 'bg-teal-400 text-black shadow-none' : '')}`}>
