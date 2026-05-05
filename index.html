@@ -121,7 +121,7 @@
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-[11px] whitespace-nowrap">
                                 <thead className="bg-zinc-900 text-zinc-400 uppercase font-bold">
-                                    <tr><th className="p-3">Programado</th><th className="p-3">Estado</th><th className="p-3">Concepto</th><th className="p-3 text-teal-400">Categoría</th><th className="p-3">Cuenta Origen</th><th className="p-3">Monto Parcial</th></tr>
+                                    <tr><th className="p-3">Programado</th><th className="p-3">Estado</th><th className="p-3">Concepto</th><th className="p-3 text-teal-400">Categoría</th><th className="p-3">Cuenta Origen</th><th className="p-3 text-right">Monto Parcial</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-900">
                                     {filteredLogs.map((log, idx) => {
@@ -139,16 +139,20 @@
                                                         <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-2 ml-2">
                                                             <button onClick={() => onEdit(log)} className="text-zinc-500 hover:text-teal-400"><IconEdit /></button>
                                                             {deletingRecId === log.ID_Unico ? (
-                                                                <div className="flex gap-1"><button onClick={() => { setDeletingRecId(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>loadData()); }} className="text-rose-500 px-2 bg-rose-500/10 rounded font-bold text-[9px]">SÍ</button><button onClick={() => setDeletingRecId(null)} className="text-zinc-500 px-1 text-[9px]">NO</button></div>
+                                                                <div className="flex gap-1 bg-black p-1 rounded border border-rose-500/50">
+                                                                    <button onClick={() => { setDeletingRecId(null); apiCall('eliminarGasto', log.ID_Unico).then(()=>loadData()); }} className="text-rose-500 px-2 font-bold text-[9px] hover:bg-rose-500/20 rounded">Eliminar</button>
+                                                                    <button onClick={() => setDeletingRecId(null)} className="text-zinc-500 px-1 text-[9px] hover:bg-zinc-800 rounded">Cancelar</button>
+                                                                </div>
                                                             ) : (
                                                                 <button onClick={() => setDeletingRecId(log.ID_Unico)} className="text-zinc-500 hover:text-rose-500"><IconDelete /></button>
                                                             )}
                                                             <button onClick={() => { setLanzandoId(log.ID_Unico); setFechaLanzamiento(getHoyStr()); }} className="text-indigo-400 hover:text-white bg-indigo-500/20 px-2 py-1 rounded flex gap-1 items-center font-bold"><IconLaunch /> Ejecutar</button>
                                                         </div>
                                                     </div>
+                                                    
                                                     {lanzandoId === log.ID_Unico && (
                                                         <div className="mt-2 p-2 bg-black rounded border border-indigo-500/50 flex gap-2 items-center fade-in max-w-sm">
-                                                            <span className="text-[9px] text-indigo-300 uppercase font-bold">Lanzar fecha:</span>
+                                                            <span className="text-[9px] text-indigo-300 uppercase font-bold">Lanzar con fecha:</span>
                                                             <input type="date" className="p-1 rounded text-xs bg-zinc-900 text-white outline-none" value={fechaLanzamiento} onChange={e=>setFechaLanzamiento(e.target.value)} />
                                                             <button onClick={()=>ejecutando(log.ID_Unico)} className="bg-indigo-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-indigo-400">Confirmar</button>
                                                             <button onClick={()=>setLanzandoId(null)} className="text-zinc-500 hover:text-white text-xs px-2">✕</button>
@@ -157,11 +161,11 @@
                                                 </td>
                                                 <td className="p-3 text-zinc-400"><span className="text-[9px] text-zinc-600 block">{log.MacroCategoria}</span>{log.Categoria}</td>
                                                 <td className="p-3 text-zinc-500">{log.Cuenta_Origen} {log.Cuenta_Destino && `➔ ${log.Cuenta_Destino}`}</td>
-                                                <td className="p-3 font-mono text-teal-400">{formatoMoneda(log.Monto_Parcial)}</td>
+                                                <td className="p-3 font-mono text-teal-400 text-right">{formatoMoneda(log.Monto_Parcial)}</td>
                                             </tr>
                                         );
                                     })}
-                                    {filteredLogs.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-zinc-600 font-mono">No hay recordatorios.</td></tr>}
+                                    {filteredLogs.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-zinc-600 font-mono">No hay recordatorios pendientes.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -175,7 +179,7 @@
             const [localCuentas, setLocalCuentas] = useState(cuentas);
             const [saving, setSaving] = useState(false);
             const [form, setForm] = useState({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' });
-            const [deletingCuenta, setDeletingCuenta] = useState(null);
+            const [deletingCuenta, setDeletingCuenta] = useState(null); 
 
             const handleEdit = (idx, field, val) => { const updated = [...localCuentas]; updated[idx][field] = val; setLocalCuentas(updated); };
             const agregarCuenta = () => { if (!form.nombre.trim()) return; setLocalCuentas([...localCuentas, { ...form, nombre: form.nombre.trim() }]); setForm({ nombre: '', tipo: 'Activo', saldoInicial: '', propietario: 'Josué', diaCorte: '' }); };
@@ -240,7 +244,7 @@
                                     </div>
                                     <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
                                         <span className={`text-[8px] uppercase px-2 py-1 rounded ${c.tipo.trim()==='Pasivo'?'bg-rose-500/20 text-rose-400':'bg-teal-500/20 text-teal-400'}`}>{c.tipo}</span>
-                                        <p className={`font-mono font-bold text-lg ${c.tipo.trim()==='Pasivo'?'text-rose-400':'text-white'}`}>{formatoMoneda(c.tipo.trim()==='Pasivo' ? balance * -1 : balance)}</p>
+                                        <p className={`font-mono font-bold text-lg ${c.tipo.trim()==='Pasivo'?'text-rose-400':'text-zinc-800'}`}>{formatoMoneda(c.tipo.trim()==='Pasivo' ? balance * -1 : balance)}</p>
                                     </div>
                                 </div>
                             );
@@ -250,14 +254,12 @@
             );
         };
 
-        // === PESTAÑA: TABLERO (CROSS-FILTERING) ===
+        // === PESTAÑA: TABLERO ===
         const Dashboard = ({ rawLogs, presupuesto, cuentas, onEdit }) => {
             const [viewScope, setViewScope] = useState('Compartido');
             const [deletingLog, setDeletingLog] = useState(null);
             const [tablaFiltroTipo, setTablaFiltroTipo] = useState('Gasto');
             const [busqueda, setBusqueda] = useState('');
-            
-            // NUEVO ESTADO: Filtro Cruzado por Categoría
             const [filtroCategoriaTabla, setFiltroCategoriaTabla] = useState(null);
 
             const mapCuentas = useMemo(() => { let map = {}; cuentas.forEach(c => map[c.nombre] = c.propietario); return map; }, [cuentas]);
@@ -266,8 +268,6 @@
             const [periodoActivo, setPeriodoActivo] = useState(periodos.includes(getPeriodoActual()) ? getPeriodoActual() : (periodos[0] || getPeriodoActual()));
             
             const [hiddenTipos, setHiddenTipos] = useState([]);
-            
-            // Si cambias de vista o de periodo, se borra el filtro de categoría para no confundir
             useEffect(() => { setHiddenTipos([]); setFiltroCategoriaTabla(null); }, [viewScope, periodoActivo]);
 
             const logsGlobal = useMemo(() => rawLogs.filter(l => l.Periodo_Pago === periodoActivo), [rawLogs, periodoActivo]);
@@ -290,9 +290,7 @@
                         if (viewScope === 'Josue' && !(Number(l.Participacion_Josue) > 0)) return false;
                         if (viewScope === 'Abi' && !(Number(l.Participacion_Abi) > 0)) return false;
                     }
-                    // APLICACIÓN DEL FILTRO CRUZADO
                     if (filtroCategoriaTabla && l.Categoria !== filtroCategoriaTabla) return false;
-                    
                     return true;
                 });
 
@@ -325,7 +323,6 @@
             }, 0);
 
             const showDeuda = (viewScope === 'Compartido' && deudaAbi === 0) || (viewScope === 'Josue' && deudaAbi < 0) || (viewScope === 'Abi' && deudaAbi > 0);
-
             const totalGastoView = logsGraficoFiltrado.reduce((acc, l) => acc + (viewScope === 'Compartido' ? Number(l.Monto_Parcial) : (viewScope === 'Josue' ? Number(l.Participacion_Josue) : Number(l.Participacion_Abi))), 0);
 
             const categoriasData = useMemo(() => {
@@ -356,6 +353,7 @@
             };
 
             const [sortConfig, setSortConfig] = useState({ key: 'Fecha_Compra', direction: 'desc' });
+            
             const requestSort = (key) => {
                 let direction = 'asc';
                 if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
@@ -367,8 +365,21 @@
                 sortableItems.sort((a, b) => {
                     let valA = a[sortConfig.key]; let valB = b[sortConfig.key];
                     if (sortConfig.key === 'Fecha_Compra') {
+                        // FIX: Ordenamiento con desempate de hora ultra-preciso
                         const parseD = (s) => { if(!s) return 0; const [d,m,y] = s.split('/'); return new Date(y, m-1, d).getTime(); };
+                        const parseDT = (s) => { 
+                            if(!s) return 0; 
+                            const p = s.split(' ');
+                            if(p.length===1) return parseD(s);
+                            const [d,m,y] = p[0].split('/');
+                            const timeParts = p[1].split(':');
+                            return new Date(y, m-1, d, timeParts[0]||0, timeParts[1]||0, timeParts[2]||0).getTime();
+                        };
                         valA = parseD(a.Fecha_Compra); valB = parseD(b.Fecha_Compra);
+                        if (valA === valB) {
+                            let timeA = parseDT(a.Fecha_Registro); let timeB = parseDT(b.Fecha_Registro);
+                            if(timeA !== timeB) return sortConfig.direction === 'asc' ? timeA - timeB : timeB - timeA;
+                        }
                     } else if (sortConfig.key === 'Aporte') {
                         valA = viewScope === 'Compartido' ? Number(a.Monto_Parcial) : (viewScope === 'Josue' ? Number(a.Participacion_Josue) : Number(a.Participacion_Abi));
                         valB = viewScope === 'Compartido' ? Number(b.Monto_Parcial) : (viewScope === 'Josue' ? Number(b.Participacion_Josue) : Number(b.Participacion_Abi));
@@ -434,12 +445,7 @@
                                     if (gastado === 0 && meta === 0) return null; const pct = meta > 0 ? (gastado / meta) * 100 : 0;
                                     return (
                                         <li key={cat} 
-                                            // LA MAGIA DEL FILTRO CRUZADO: Clic hace filtro
-                                            onClick={() => {
-                                                setFiltroCategoriaTabla(cat);
-                                                // Si el filtro maestro estaba en Transferencias/Ingresos, lo forzamos a Gastos para que la tabla no quede vacía
-                                                if (tablaFiltroTipo !== 'Gasto' && tablaFiltroTipo !== 'Todos') setTablaFiltroTipo('Gasto');
-                                            }}
+                                            onClick={() => { setFiltroCategoriaTabla(cat); if (tablaFiltroTipo !== 'Gasto' && tablaFiltroTipo !== 'Todos') setTablaFiltroTipo('Gasto'); }}
                                             className="text-xs cursor-pointer hover:bg-zinc-900/50 p-2 -mx-2 rounded transition-colors"
                                         >
                                             <div className="flex justify-between items-center mb-1">
@@ -467,7 +473,6 @@
                                     <option value="Todos">Ver Todos</option>
                                 </select>
                                 
-                                {/* LA PÍLDORA DEL FILTRO CRUZADO */}
                                 {filtroCategoriaTabla && (
                                     <button onClick={() => setFiltroCategoriaTabla(null)} className="flex items-center gap-1 bg-teal-500/20 text-teal-500 px-2 py-1.5 rounded text-[10px] font-bold border border-teal-500/30 hover:bg-rose-500/20 hover:text-rose-500 hover:border-rose-500/30 transition-colors">
                                         <span>{filtroCategoriaTabla}</span><span>✕</span>
